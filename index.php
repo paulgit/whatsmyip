@@ -63,8 +63,9 @@ else
 	echo $users_ip ."<br>";
 	$db = new \IP2Location\Database('./databases/IP2LOCATION-LITE-DB3.BIN', \IP2Location\Database::FILE_IO);
 	$records = $db->lookup($users_ip, \IP2Location\Database::ALL);		
-	echo "<div style=\"font-weight: normal;font-size:4vw;\">" . $records['cityName'] . ", " . $records['regionName'] . "<br>" . $records['countryName'] . "</div>";
-	echo "<div style=\"font-weight: normat;font-size:1vw\"><br>This site or product includes IP2Location LITE data available<br>from <a href=\"https://www.ip2location.com\">https://www.ip2location.com.</a></div>";
+	echo "<img src=\"flags\\" .strtolower($records['countryCode']) . "_64.png\" alt=\"country flag\" height=\"64\" width=\"64\" >";
+	echo "<div style=\"font-weight: normal;font-size:4vw;\">" . $records['cityName'] . "<br>" . $records['regionName'] . "<br>" . $records['countryName'] . "</div>";
+	echo "<div style=\"font-weight: normat;font-size:1vw\"><br>This site or product includes IP2Location LITE data<br> and IP2Location™ Country Flags available<br>from <a href=\"https://www.ip2location.com\">https://www.ip2location.com</a></div>";
 	echo "</div></body></html>";
 }
 
