@@ -12,13 +12,10 @@
  * @license   MIT License
  */
 
-require_once 'config.php';
-
 // Common headers to prevent browsers from caching
 header('Vary: *');
-header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+header("Cache-Control: no-cache, no-store, max-age=1"); // HTTP 1.1.
 header("Pragma: no-cache"); // HTTP 1.0.
-header("Expires: 0"); // Proxies.
 
 function codeToCountry( $code )
 {
@@ -279,9 +276,9 @@ function codeToCountry( $code )
 		return $countryList[$code];
 }
 
-function ipInfo($ip) 
+function ipInfo($ip,$token) 
 {
-	$url = "https://ipinfo.io/{$ip}?token\={$config['ipinfo_token']}";
+	$url = "https://ipinfo.io/{$ip}?token\={$token}";
 	$json = file_get_contents($url);
 	$details = json_decode($json,true);
 	return $details;
@@ -289,7 +286,8 @@ function ipInfo($ip)
 
 function whatsMyIP()
 { 
-	foreach (array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_ADDR') as $key)
+	var_dump($_SERVER);
+	foreach (array('HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_HOST', 'REMOTE_ADDR') as $key)
 	{
 		if (array_key_exists($key, $_SERVER) === true)
 		{
@@ -328,17 +326,19 @@ else if ($format == "json")
 else
 {
 	header("Content-Type: text/html");
+	echo "<!DOCTYPE html>";
 	echo "<html><head>";
-	echo "<link href='https://fonts.googleapis.com/css?family=Roboto Mono' rel='stylesheet'>";
 	echo "</head>";
-	echo "<body><div style=\"display: flex;flex-direction: column;justify-content: center;align-items: center;text-align: center;min-height: 50vh;font-family:'Roboto Mono';font-weight: bold;font-size:7vw;\">";
+	echo "<body><div style=\"display: flex;flex-direction: column;justify-content: center;align-items: center;text-align: center;min-height: 50vh;font-family: 'Helvetica Neue','Helvetica',sans-serif;font-weight: bold;font-size:10vw;\">";
 	echo $users_ip ."<br>";
-	$records = ipInfo($users_ip);
+
+	$config = include('config.php');
+	$records = ipInfo($users_ip, $config['token']);
 
 	echo "<div style=\"font-weight: normal;font-size:2vw;\">" . $records['hostname'] . "<br>" . $records['org'] . "</div>";
 	echo "<div style=\"font-weight: normal;font-size:4vw;\"><p>" . $records['city'] . ", " . $records['region'] . "<br>" . codeToCountry($records['country']) ."<br>";
-	echo "<img src=\"flags\\" . strtolower($records['country']) . "_64.png\" alt=\"country flag\" height=\"64\" width=\"64\" ></p></div>";
-	echo "<div style=\"font-weight: normat;font-size:1vw\"><br>This site or product includes<br>IP2Location™ Country Flags available<br>from <a href=\"https://www.ip2location.com\">https://www.ip2location.com</a></div>";
+	echo "<img style=\"width: 10vw; height: 10w; object-fit: cover;\" src=\"flags\\" . strtolower($records['country']) . "_64.png\" alt=\"country flag\" ></p></div>";
+	echo "<div style=\"font-weight: normal;font-style:italic;font-size:1vw\">This site or product includes IP2Location™ Country Flags available from <a href=\"https://www.ip2location.com\">https://www.ip2location.com</a></div>";
 	echo "</div></body></html>";
 }
 
