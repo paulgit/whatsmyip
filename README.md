@@ -10,9 +10,9 @@ I have enhanced the original script by allowing an additional format specifier. 
 * https://example.org/?format=html
 
 ### text format
-* https://example.org/?format=html
+* https://example.org/?format=test
 
 ### json format
-* https://example.org/?format=html
+* https://example.org/?format=json
 
-You can see the script in action at [https://ip.poyo.ch](https://ip.poyo.ch)
+You can see the script in action at [https://ip.paulg.it](https://ip.paulg.it)
