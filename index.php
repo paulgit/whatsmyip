@@ -1,14 +1,14 @@
 <?php
 /*
  * What's My IP Script.
- * PHP Version 7.x.
+ * PHP Version 8.x.
  *
  * @see       https://code.paulg.it/paulgit/whatsmyip What's My IP
  *
  * @author    Testo Development (TestoEXE)
  * @author    Paul Git (paulgit) <paulgit@pm.me>
  * @copyright 2019 Testo Development
- * @copyright 2020 Paul Git
+ * @copyright 2025 Paul Git
  * @license   MIT License
  */
 
@@ -286,7 +286,6 @@ function ipInfo($ip,$token)
 
 function whatsMyIP()
 { 
-	var_dump($_SERVER);
 	foreach (array('HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_HOST', 'REMOTE_ADDR') as $key)
 	{
 		if (array_key_exists($key, $_SERVER) === true)
@@ -303,43 +302,113 @@ function whatsMyIP()
 }
 
 $users_ip = whatsMyIP();
-
-if (isset($_GET["format"]))
+if (!$users_ip) 
 {
-	$format = trim($_GET["format"]);
-}
-else
-{
-	$format = "html";
+//	die("Unable to determine your IP address.");
 }
 
-if ($format == "text")
+// Get format type (default to 'html')
+$format = isset($_GET['format']) ? strtolower(trim($_GET['format'])) : 'html';
+
+// Load API token from config
+$config = include 'config.php';
+$records = ipInfo($users_ip, $config['token']);
+
+if ($format === 'json') 
+{
+	header('Content-Type: application/json');
+	echo json_encode(["ip" => $users_ip]);
+	exit;
+} 
+elseif ($format === 'text') 
 {
 	header('Content-Type: text/plain');
 	echo $users_ip;
+	exit;
 }
-else if ($format == "json")
-{
-	header('Content-Type: application/json');
-	echo "{\"ip\":\"$users_ip\"}";
-}
-else
-{
-	header("Content-Type: text/html");
-	echo "<!DOCTYPE html>";
-	echo "<html><head>";
-	echo "</head>";
-	echo "<body><div style=\"display: flex;flex-direction: column;justify-content: center;align-items: center;text-align: center;min-height: 50vh;font-family: 'Helvetica Neue','Helvetica',sans-serif;font-weight: bold;font-size:10vw;\">";
-	echo $users_ip ."<br>";
-
-	$config = include('config.php');
-	$records = ipInfo($users_ip, $config['token']);
-
-	echo "<div style=\"font-weight: normal;font-size:2vw;\">" . $records['hostname'] . "<br>" . $records['org'] . "</div>";
-	echo "<div style=\"font-weight: normal;font-size:4vw;\"><p>" . $records['city'] . ", " . $records['region'] . "<br>" . codeToCountry($records['country']) ."<br>";
-	echo "<img style=\"width: 10vw; height: 10w; object-fit: cover;\" src=\"flags\\" . strtolower($records['country']) . "_64.png\" alt=\"country flag\" ></p></div>";
-	echo "<div style=\"font-weight: normal;font-style:italic;font-size:1vw\">This site or product includes IP2Location™ Country Flags available from <a href=\"https://www.ip2location.com\">https://www.ip2location.com</a></div>";
-	echo "</div></body></html>";
-}
-
-?>
+?>	
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>IP Information</title>
+	<style>
+		body {
+			display: flex;
+			justify-content: flex-start; /* Aligns content to the top */
+			align-items: center;
+			text-align: center;
+			min-height: 100vh;
+			font-family: 'Helvetica Neue', 'Helvetica', sans-serif;
+			margin: 0;
+			padding: 20px;
+			background-color: #f8f8f8;
+			flex-direction: column; /* Ensures content stacks vertically */
+		}
+		.container {
+			display: flex;
+			flex-direction: column;
+			align-items: center; /* Centers content horizontally */
+			justify-content: flex-start; /* Aligns content at the top */
+			max-width: 90%;
+			width: 100%;
+			padding-top: 20px; /* Adds space at the top */
+		}
+		.ip-address {
+			font-size: 8vw;
+			font-weight: bold;
+		}
+		.isp {
+			font-size: 3vw;
+			font-weight: normal;
+			margin-top: 10px;
+		}
+		.location {
+			font-size: 4vw;
+			font-weight: normal;
+			margin-top: 10px;
+		}
+		.flag {
+			width: 10vw;
+			height: auto;
+			object-fit: cover;
+			margin-top: 10px;
+		}
+		.credits {
+			font-size: 1.5vw;
+			font-style: italic;
+			margin-top: 20px;
+		}
+		.credits a {
+			color: #0073e6;
+			text-decoration: none;
+		}
+		.credits a:hover {
+			text-decoration: underline;
+		}
+		
+		/* Responsive Adjustments */
+		@media (max-width: 768px) {
+			.ip-address { font-size: 10vw; }
+			.isp { font-size: 4vw; }
+			.location { font-size: 5vw; }
+			.flag { width: 15vw; }
+			.credits { font-size: 2.5vw; }
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="ip-address"><?php echo $users_ip ?></div>
+		<div class="isp"><?php echo $records['org'] ?></div>
+		<div class="location"><p><?php echo $records['city'] . ", " . $records['region'] . "<br>" . codeToCountry($records['country']) ."<br>"?>
+			<img class="flag" src=<?php echo "flags/" . strtolower($records['country']) . "_64.png" ?> alt="Flag">
+		</div>
+		<div class="credits">
+			This site or product includes IP2Location™ Country Flags available from 
+			<a href="https://www.ip2location.com">IP2Location</a>
+		</div>
+	</div>
+</body>
+</html>
