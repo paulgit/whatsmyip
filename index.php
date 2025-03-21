@@ -399,6 +399,22 @@ elseif ($format === 'text')
 	</style>
 </head>
 <body>
+	<script>
+		function adjustFontSize() {
+			const element = document.querySelector(".ip-address");
+			let fontSize = 8; // Start at 8vw
+			element.style.fontSize = `${fontSize}vw`;
+			
+			while (element.scrollWidth > window.innerWidth * 0.9 && fontSize > 1) {
+				fontSize -= 0.5; // Reduce font size
+				element.style.fontSize = `${fontSize}vw`;
+			}
+		}
+		
+		// Run on load and resize
+		window.addEventListener("resize", adjustFontSize);
+		window.addEventListener("load", adjustFontSize);
+	</script>
 	<div class="container">
 		<div class="ip-address"><?php echo $users_ip ?></div>
 		<div class="isp"><?php echo $records['org'] ?></div>
