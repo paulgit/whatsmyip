@@ -10,7 +10,7 @@ I have enhanced the original script by allowing an additional format specifier. 
 * https://example.org/?format=html
 
 ### text format
-* https://example.org/?format=test
+* https://example.org/?format=text
 
 ### json format
 * https://example.org/?format=json
