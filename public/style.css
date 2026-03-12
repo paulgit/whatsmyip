@@ -295,12 +295,15 @@ body {
 .ip-wrapper {
     display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: var(--spacing-sm);
     background-color: var(--bg-secondary);
-    padding: var(--spacing-md) var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
+    max-width: 100%;
     transition:
         transform var(--transition-fast),
         box-shadow var(--transition-fast);
@@ -313,11 +316,13 @@ body {
 
 .ip-address {
     font-family: var(--font-mono);
-    font-size: clamp(1.75rem, 5vw, 3.5rem);
+    font-size: clamp(1rem, 4.5vw, 3.5rem);
     font-weight: 700;
     color: var(--text-primary);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
     user-select: all;
+    word-break: break-all;
+    text-align: center;
 }
 
 /* Copy Button */
@@ -369,7 +374,7 @@ body {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: var(--spacing-xl);
+    padding: var(--spacing-md);
     box-shadow: var(--shadow-md);
     transition: box-shadow var(--transition-base);
 }
@@ -455,41 +460,6 @@ body {
     text-decoration: underline;
 }
 
-.api-links {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-sm);
-    flex-wrap: wrap;
-    padding: var(--spacing-md);
-    background-color: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
-}
-
-.api-label {
-    font-weight: 600;
-    color: var(--text-secondary);
-}
-
-.api-link {
-    font-family: var(--font-mono);
-    font-size: 0.875rem;
-    padding: 0.25rem 0.5rem;
-    background-color: var(--bg-tertiary);
-    border-radius: var(--radius-sm);
-    transition: background-color var(--transition-fast);
-}
-
-.api-link:hover {
-    background-color: var(--accent-light);
-    text-decoration: none;
-}
-
-.separator {
-    color: var(--border-color);
-}
-
 /* ============================================
    Utility Classes
    ============================================ */
@@ -512,11 +482,18 @@ body {
 
 @media (min-width: 768px) {
     .ip-wrapper {
-        padding: var(--spacing-lg) var(--spacing-xl);
+        padding: var(--spacing-md) var(--spacing-xl);
+        flex-wrap: nowrap;
+    }
+
+    .ip-address {
+        font-size: clamp(1.75rem, 4vw, 3.5rem);
+        word-break: normal;
+        letter-spacing: 0.05em;
     }
 
     .info-card {
-        padding: var(--spacing-2xl);
+        padding: var(--spacing-xl);
     }
 }
 
