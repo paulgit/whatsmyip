@@ -1,0 +1,25 @@
+{
+  "name": "whatsmyip",
+  "version": "2.0.0",
+  "description": "A simple service to display your external IP address with geolocation information",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "ip",
+    "geolocation",
+    "whatsmyip"
+  ],
+  "author": "Paul Git",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "flag-icons": "^7.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

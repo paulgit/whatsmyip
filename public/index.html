@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="description"
+            content="Discover your external IP address with geolocation information"
+        />
+        <meta name="theme-color" content="#1a1a2e" />
+        <title>What's My IP Address?</title>
+        <link rel="stylesheet" href="/flag-icons/css/flag-icons.min.css" />
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <div id="flag-bg" class="flag-bg" aria-hidden="true"></div>
+        <div class="container">
+            <main class="content">
+                <!-- Loading State -->
+                <div id="loading" class="loading" aria-live="polite">
+                    <div class="spinner"></div>
+                    <p>Detecting your IP address...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="error" class="error hidden" role="alert">
+                    <svg
+                        class="icon-error"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <p id="error-message">Unable to detect your IP address</p>
+                    <button id="retry-btn" class="btn-retry">Try Again</button>
+                </div>
+
+                <!-- Main Content -->
+                <div id="main-content" class="main-content hidden">
+                    <h1 class="sr-only">Your IP Address Information</h1>
+
+                    <!-- IP Address Display -->
+                    <div class="ip-display">
+                        <label for="ip-address" class="ip-label"
+                            >Your IP Address</label
+                        >
+                        <div class="ip-wrapper">
+                            <span
+                                id="ip-address"
+                                class="ip-address"
+                                aria-live="polite"
+                                >--.--.--.--</span
+                            >
+                            <button
+                                id="copy-btn"
+                                class="btn-copy"
+                                aria-label="Copy IP address to clipboard"
+                                title="Copy to clipboard"
+                            >
+                                <svg
+                                    class="icon-copy"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <rect
+                                        x="9"
+                                        y="9"
+                                        width="13"
+                                        height="13"
+                                        rx="2"
+                                        ry="2"
+                                    />
+                                    <path
+                                        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                                    />
+                                </svg>
+                                <svg
+                                    class="icon-check hidden"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Location Information -->
+                    <div id="location-info" class="location-info">
+                        <div class="info-card">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <svg
+                                        class="icon"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <path
+                                            d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                                        />
+                                        <circle cx="12" cy="10" r="3" />
+                                    </svg>
+                                    <div>
+                                        <div class="info-label">Location</div>
+                                        <div id="location" class="info-value">
+                                            --
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="info-item">
+                                    <svg
+                                        class="icon"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <rect
+                                            x="2"
+                                            y="7"
+                                            width="20"
+                                            height="14"
+                                            rx="2"
+                                            ry="2"
+                                        />
+                                        <path
+                                            d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"
+                                        />
+                                    </svg>
+                                    <div>
+                                        <div class="info-label">ISP</div>
+                                        <div id="isp" class="info-value">
+                                            --
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="credits">
+                    <p>
+                        Geolocation data by
+                        <a
+                            href="https://ipinfo.io"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            >IPInfo</a
+                        >
+                    </p>
+                </div>
+
+                <!-- API Format Links -->
+                <div class="api-links">
+                    <span class="api-label">API Formats:</span>
+                    <a
+                        href="/?format=json"
+                        class="api-link"
+                        target="_blank"
+                        rel="noopener"
+                        >JSON</a
+                    >
+                    <span class="separator">•</span>
+                    <a
+                        href="/?format=text"
+                        class="api-link"
+                        target="_blank"
+                        rel="noopener"
+                        >Text</a
+                    >
+                    <span class="separator">•</span>
+                    <a href="/?format=html" class="api-link">HTML</a>
+                </div>
+            </footer>
+        </div>
+
+        <script src="app.js"></script>
+    </body>
+</html>

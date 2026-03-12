@@ -1,0 +1,582 @@
+/**
+ * What's My IP - Modern Responsive Styles
+ * Supports light/dark mode with smooth transitions
+ */
+
+/* ============================================
+   CSS Custom Properties (Theme Variables)
+   ============================================ */
+:root {
+    /* Colors - Light Mode */
+    --bg-primary: rgba(248, 249, 250, 0.55);
+    --bg-secondary: rgba(255, 255, 255, 0.6);
+    --bg-tertiary: rgba(233, 236, 239, 0.6);
+
+    --text-primary: #1a1a2e;
+    --text-secondary: #495057;
+    --text-tertiary: #6c757d;
+
+    --accent-primary: #0066cc;
+    --accent-hover: #0052a3;
+    --accent-light: #e6f2ff;
+
+    --success: #28a745;
+    --error: #dc3545;
+    --error-bg: #fff5f5;
+
+    --border-color: #dee2e6;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+    /* Typography */
+    --font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial,
+        sans-serif;
+    --font-mono:
+        "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
+
+    /* Spacing */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+    --spacing-2xl: 4rem;
+
+    /* Border Radius */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-full: 9999px;
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-base: 250ms ease;
+    --transition-slow: 350ms ease;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: rgba(13, 17, 23, 0.55);
+        --bg-secondary: rgba(22, 27, 34, 0.6);
+        --bg-tertiary: rgba(28, 33, 40, 0.6);
+
+        --text-primary: #e6edf3;
+        --text-secondary: #adbac7;
+        --text-tertiary: #768390;
+
+        --accent-primary: #58a6ff;
+        --accent-hover: #79b8ff;
+        --accent-light: #1c2d41;
+
+        --success: #3fb950;
+        --error: #f85149;
+        --error-bg: #2d1517;
+
+        --border-color: #30363d;
+        --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* ============================================
+   Base Styles & Reset
+   ============================================ */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: transparent;
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition:
+        background-color var(--transition-base),
+        color var(--transition-base);
+}
+
+/* ============================================
+   Full-Page Flag Background
+   ============================================ */
+.flag-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    /* Override flag-icons' .fib defaults (contain/50%/no-repeat) */
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    opacity: 0;
+    filter: blur(12px) saturate(0.8);
+    transform: scale(1.04);
+    transition:
+        opacity 0.8s ease,
+        filter 0.8s ease;
+}
+
+.flag-bg--visible {
+    opacity: 0.7;
+}
+
+@media (prefers-color-scheme: dark) {
+    .flag-bg--visible {
+        opacity: 0.9;
+        filter: blur(12px) saturate(1.8) brightness(0.4) contrast(1.4);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .flag-bg {
+        transition: none;
+    }
+}
+
+/* ============================================
+   Layout
+   ============================================ */
+.container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-md);
+}
+
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-lg) 0;
+}
+
+/* ============================================
+   Loading State
+   ============================================ */
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ============================================
+   Error State
+   ============================================ */
+.error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    text-align: center;
+    padding: var(--spacing-xl);
+    background-color: var(--error-bg);
+    border: 1px solid var(--error);
+    border-radius: var(--radius-lg);
+    max-width: 500px;
+}
+
+.icon-error {
+    width: 64px;
+    height: 64px;
+    color: var(--error);
+}
+
+.btn-retry {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: 1rem;
+    font-weight: 500;
+    color: white;
+    background-color: var(--accent-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition:
+        background-color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.btn-retry:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.btn-retry:active {
+    transform: translateY(0);
+}
+
+/* ============================================
+   Main Content
+   ============================================ */
+.main-content {
+    width: 100%;
+    max-width: 800px;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Screen Reader Only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ============================================
+   IP Address Display
+   ============================================ */
+.ip-display {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.ip-label {
+    display: block;
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: 0.02em;
+}
+
+.ip-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background-color: var(--bg-secondary);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    transition:
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
+}
+
+.ip-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.ip-address {
+    font-family: var(--font-mono);
+    font-size: clamp(1.75rem, 5vw, 3.5rem);
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.05em;
+    user-select: all;
+}
+
+/* Copy Button */
+.btn-copy {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.btn-copy:hover {
+    background-color: var(--accent-light);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.btn-copy:active {
+    transform: scale(0.95);
+}
+
+.btn-copy svg {
+    width: 20px;
+    height: 20px;
+    transition: opacity var(--transition-fast);
+}
+
+.btn-copy.copied {
+    background-color: var(--success);
+    border-color: var(--success);
+    color: white;
+}
+
+/* ============================================
+   Location Information
+   ============================================ */
+.location-info {
+    width: 100%;
+}
+
+.info-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    transition: box-shadow var(--transition-base);
+}
+
+.info-card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+}
+
+.info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    transition: background-color var(--transition-fast);
+}
+
+.info-item:hover {
+    background-color: var(--accent-light);
+}
+
+.info-item .icon {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-primary);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.info-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    font-weight: 600;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+/* ============================================
+   Footer
+   ============================================ */
+.footer {
+    margin-top: auto;
+    padding-top: var(--spacing-xl);
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+}
+
+.credits {
+    margin-bottom: var(--spacing-md);
+}
+
+.credits p {
+    margin: 0.25rem 0;
+}
+
+.credits a,
+.api-link {
+    color: var(--accent-primary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.credits a:hover,
+.api-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+}
+
+.api-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+    padding: var(--spacing-md);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.api-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.api-link {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    transition: background-color var(--transition-fast);
+}
+
+.api-link:hover {
+    background-color: var(--accent-light);
+    text-decoration: none;
+}
+
+.separator {
+    color: var(--border-color);
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.hidden {
+    display: none !important;
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+@media (min-width: 640px) {
+    .container {
+        padding: var(--spacing-lg);
+    }
+
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 768px) {
+    .ip-wrapper {
+        padding: var(--spacing-lg) var(--spacing-xl);
+    }
+
+    .info-card {
+        padding: var(--spacing-2xl);
+    }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        padding: var(--spacing-xl);
+    }
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+@media print {
+    body {
+        background-color: white;
+        color: black;
+    }
+
+    .btn-copy,
+    .footer,
+    .loading,
+    .error {
+        display: none !important;
+    }
+
+    .ip-wrapper {
+        box-shadow: none;
+        border: 2px solid black;
+    }
+}
+
+/* ============================================
+   Accessibility - Reduced Motion
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .spinner {
+        animation: none;
+        border-top-color: var(--accent-primary);
+    }
+}
+
+/* ============================================
+   High Contrast Mode Support
+   ============================================ */
+@media (prefers-contrast: high) {
+    :root {
+        --border-color: currentColor;
+    }
+
+    .btn-copy,
+    .info-card,
+    .ip-wrapper {
+        border-width: 2px;
+    }
+}

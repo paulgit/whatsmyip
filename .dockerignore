@@ -1,0 +1,65 @@
+# Node modules (will be installed in container)
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn.lock
+pnpm-lock.yaml
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Documentation
+README.md
+*.md
+docs/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing and CI
+.github/
+.gitlab-ci.yml
+.travis.yml
+coverage/
+.nyc_output/
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Build artifacts
+dist/
+build/
+.cache/
+
+# Logs
+logs/
+*.log
+
+# Old PHP files (not needed for Node.js version)
+index.php
+config.php
+config-sample.php
+.htaccess
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+.eslintrc*
+.prettierrc*
+.editorconfig
