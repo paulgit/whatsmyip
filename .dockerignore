@@ -1,26 +1,24 @@
-# Node modules (will be installed in container)
+# Dependency directories and package manager caches
 node_modules/
-npm-debug.log
-yarn-error.log
-yarn.lock
-pnpm-lock.yaml
+.npm/
+.pnpm-store/
 
-# Git
+# Git metadata
 .git/
 .gitignore
 .gitattributes
 
-# Environment files
+# Environment and secrets
 .env
 .env.*
 !.env.example
 
-# Documentation
+# Documentation and local notes
 README.md
-*.md
 docs/
+*.md
 
-# IDE and editor files
+# Editor/OS files
 .vscode/
 .idea/
 *.swp
@@ -28,10 +26,7 @@ docs/
 *~
 .DS_Store
 
-# Testing and CI
-.github/
-.gitlab-ci.yml
-.travis.yml
+# Test and coverage artifacts
 coverage/
 .nyc_output/
 test/
@@ -39,27 +34,28 @@ tests/
 *.test.js
 *.spec.js
 
-# Build artifacts
+# Build/cache artifacts
 dist/
 build/
 .cache/
+.tmp/
+tmp/
 
 # Logs
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Old PHP files (not needed for Node.js version)
-index.php
-config.php
-config-sample.php
-.htaccess
+# CI/CD metadata not needed in image context
+.github/
+.gitlab-ci.yml
+.travis.yml
 
-# Docker files
-Dockerfile
+# Local deployment/runtime files not needed for image build
+vercel.json
 docker-compose.yml
-.dockerignore
 
-# Misc
-.eslintrc*
-.prettierrc*
-.editorconfig
+# Keep Dockerfile and .dockerignore in context
+# (do NOT ignore Dockerfile or .dockerignore)

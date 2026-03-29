@@ -1,37 +1,26 @@
-# Use official Node.js LTS (Long Term Support) image
-FROM node:24-alpine
+# syntax=docker/dockerfile:1.7
 
-# Set working directory
+FROM node:24-alpine AS deps
 WORKDIR /app
 
-# Copy package files
+# Install only production dependencies
 COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Install production dependencies only
-RUN npm ci --only=production && \
-    npm cache clean --force
+FROM gcr.io/distroless/nodejs24-debian12:nonroot AS runner
+WORKDIR /app
 
-# Copy application files
-COPY server.js ./
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Copy only runtime essentials
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package*.json ./
+COPY server.js ./server.js
 COPY public ./public
-
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app
-
-# Switch to non-root user
-USER nodejs
 
 # Expose port
 EXPOSE 3000
 
-# Set environment variable for production
-ENV NODE_ENV=production
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Start the application
-CMD ["node", "server.js"]
+# Distroless image entrypoint is Node, so pass script path
+CMD ["server.js"]
