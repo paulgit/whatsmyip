@@ -17,6 +17,7 @@
     retryBtn: document.getElementById("retry-btn"),
     mainContent: document.getElementById("main-content"),
     ipAddress: document.getElementById("ip-address"),
+    hostname: document.getElementById("hostname"),
     copyBtn: document.getElementById("copy-btn"),
     location: document.getElementById("location"),
     isp: document.getElementById("isp"),
@@ -75,8 +76,19 @@
    * Display IP information in the UI
    */
   function displayIPInfo(data) {
-    // Display IP address
-    elements.ipAddress.textContent = data.ip || "--";
+    // Display IP and hostname
+    const ip = data.ip || "--";
+    const hostname = data.hostname || "Unknown";
+    const normalizedHostname = normalizeHostname(hostname);
+    const hasKnownHostname = isKnownHostname(normalizedHostname);
+
+    elements.ipAddress.textContent = ip;
+    if (elements.hostname) {
+      elements.hostname.textContent = hasKnownHostname
+        ? normalizedHostname
+        : "";
+      elements.hostname.style.display = hasKnownHostname ? "block" : "none";
+    }
 
     // Display location information if available
     if (data.city || data.region || data.country) {
@@ -216,6 +228,20 @@
     elements.mainContent.classList.remove("hidden");
     elements.loading.classList.add("hidden");
     elements.error.classList.add("hidden");
+  }
+
+  /**
+   * Normalize hostname into a safe trimmed string
+   */
+  function normalizeHostname(value) {
+    return typeof value === "string" ? value.trim() : "";
+  }
+
+  /**
+   * Determine whether a hostname is meaningful for display
+   */
+  function isKnownHostname(hostname) {
+    return hostname !== "" && hostname.toLowerCase() !== "unknown";
   }
 
   /**

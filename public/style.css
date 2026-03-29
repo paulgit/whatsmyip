@@ -3,6 +3,23 @@
  * Supports light/dark mode with smooth transitions
  */
 
+/* Hostname text under IP */
+.ip-hostname {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+    line-height: 1.4;
+    word-break: break-word;
+    text-align: left;
+}
+
+/* Keep IP + hostname stacked while copy button stays aligned */
+.ip-wrapper > :is(.ip-address, .ip-hostname):not(.btn-copy) {
+    width: calc(100% - 44px - var(--spacing-sm));
+}
+
 /* ============================================
    CSS Custom Properties (Theme Variables)
    ============================================ */
@@ -293,11 +310,14 @@ body {
 }
 
 .ip-wrapper {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--spacing-sm);
+    display: inline-grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "ip copy"
+        "host copy";
+    align-items: start;
+    column-gap: var(--spacing-sm);
+    row-gap: 0.125rem;
     background-color: var(--bg-secondary);
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--radius-lg);
@@ -315,6 +335,8 @@ body {
 }
 
 .ip-address {
+    grid-area: ip;
+    display: block;
     font-family: var(--font-mono);
     font-size: clamp(1rem, 4.5vw, 3.5rem);
     font-weight: 700;
@@ -322,33 +344,58 @@ body {
     letter-spacing: 0.03em;
     user-select: all;
     word-break: break-all;
-    text-align: center;
+    text-align: left;
 }
 
 /* Copy Button */
 .btn-copy {
+    grid-area: copy;
+    align-self: start;
+    justify-self: end;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 44px;
     height: 44px;
     padding: 0;
-    background-color: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
+    background-color: color-mix(in srgb, var(--bg-tertiary) 70%, white 30%);
+    border: 1px solid
+        color-mix(in srgb, var(--border-color) 65%, var(--text-secondary) 35%);
+    color: var(--text-secondary);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition:
+        transform var(--transition-fast),
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        color var(--transition-fast);
     flex-shrink: 0;
 }
 
 .btn-copy:hover {
-    background-color: var(--accent-light);
+    transform: scale(1.03);
+    background-color: color-mix(
+        in srgb,
+        var(--accent-light) 75%,
+        var(--bg-secondary) 25%
+    );
     border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px
+        color-mix(in srgb, var(--accent-primary) 20%, transparent);
     color: var(--accent-primary);
 }
 
 .btn-copy:active {
-    transform: scale(0.95);
+    transform: scale(0.96);
+}
+
+.btn-copy:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 4px
+        color-mix(in srgb, var(--accent-primary) 28%, transparent);
 }
 
 .btn-copy svg {
@@ -361,6 +408,21 @@ body {
     background-color: var(--success);
     border-color: var(--success);
     color: white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-copy {
+        transition:
+            background-color var(--transition-fast),
+            border-color var(--transition-fast),
+            box-shadow var(--transition-fast),
+            color var(--transition-fast);
+    }
+
+    .btn-copy:hover,
+    .btn-copy:active {
+        transform: none;
+    }
 }
 
 /* ============================================
@@ -483,7 +545,6 @@ body {
 @media (min-width: 768px) {
     .ip-wrapper {
         padding: var(--spacing-md) var(--spacing-xl);
-        flex-wrap: nowrap;
     }
 
     .ip-address {
@@ -494,6 +555,48 @@ body {
 
     .info-card {
         padding: var(--spacing-xl);
+    }
+}
+
+@media (max-width: 480px) {
+    .ip-wrapper {
+        width: 100%;
+        max-width: 100%;
+        padding: 0.75rem;
+        column-gap: 0.625rem;
+        row-gap: 0.125rem;
+        grid-template-columns: minmax(0, 1fr) 44px;
+    }
+
+    .ip-wrapper > :is(.ip-address, .ip-hostname):not(.btn-copy) {
+        width: auto;
+        min-width: 0;
+    }
+
+    .ip-address {
+        font-size: clamp(1.25rem, 9vw, 2rem);
+        line-height: 1.1;
+        letter-spacing: 0.02em;
+        word-break: break-all;
+        overflow-wrap: anywhere;
+    }
+
+    .ip-hostname {
+        font-size: 0.75rem;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    .btn-copy {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .btn-copy svg {
+        width: 18px;
+        height: 18px;
     }
 }
 

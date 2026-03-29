@@ -125,6 +125,7 @@ app.get("/", async (req, res) => {
     const ipInfo = await getIPInfo(clientIP);
     return res.json({
       ip: clientIP,
+      hostname: ipInfo?.hostname || "Unknown",
       ...ipInfo,
     });
   }
@@ -165,12 +166,14 @@ app.get("/api/info", async (req, res) => {
   if (!ipInfo) {
     return res.json({
       ip: clientIP,
+      hostname: "Unknown",
       error: "Geolocation data unavailable",
     });
   }
 
   res.json({
     ip: clientIP,
+    hostname: ipInfo.hostname || "Unknown",
     ...ipInfo,
   });
 });
