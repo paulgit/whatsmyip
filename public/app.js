@@ -36,6 +36,21 @@
     elements.copyBtn.addEventListener("click", handleCopy);
     elements.retryBtn.addEventListener("click", handleRetry);
 
+    // Theme toggle
+    const themeToggle = document.getElementById("theme-toggle");
+    if (themeToggle) {
+      const stored = localStorage.getItem("theme");
+      if (stored) document.documentElement.setAttribute("data-theme", stored);
+      themeToggle.addEventListener("click", () => {
+        const current = document.documentElement.getAttribute("data-theme");
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const isDark = current === "dark" || (!current && prefersDark);
+        const next = isDark ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem("theme", next);
+      });
+    }
+
     // Fetch IP information
     fetchIPInfo();
   }
@@ -98,13 +113,27 @@
       if (data.region) locationParts.push(data.region);
       if (data.country) locationParts.push(getCountryName(data.country));
 
-      elements.location.textContent = locationParts.join(", ") || "Unknown";
+      const locationText = locationParts.join(", ") || "Unknown";
 
-      // Set full-page flag background
+      // Set full-page flag background and inline flag icon
       if (data.country && elements.flagBg) {
-        const cc = data.country.toLowerCase();
-        elements.flagBg.className = `flag-bg fib fi-${cc}`;
-        elements.flagBg.classList.add("flag-bg--visible");
+        const raw = data.country.toLowerCase();
+        const cc = /^[a-z]{2}$/.test(raw) ? raw : null;
+        if (cc) {
+          elements.flagBg.className = `flag-bg fib fi-${cc}`;
+          elements.flagBg.classList.add("flag-bg--visible");
+          const flag = document.createElement("span");
+          flag.className = `location-flag fi fi-${cc}`;
+          flag.setAttribute("aria-hidden", "true");
+          const text = document.createElement("span");
+          text.className = "location-text";
+          text.textContent = locationText;
+          elements.location.replaceChildren(flag, text);
+        } else {
+          elements.location.textContent = locationText;
+        }
+      } else {
+        elements.location.textContent = locationText;
       }
 
       elements.locationInfo.style.display = "block";

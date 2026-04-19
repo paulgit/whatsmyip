@@ -31,6 +31,8 @@ app.use((req, res, next) => {
  * Handles proxies, load balancers, and CDNs
  */
 function getClientIP(req) {
+  if (process.env.DEV_IP) return process.env.DEV_IP;
+
   const headers = [
     "cf-connecting-ip", // Cloudflare
     "x-forwarded-for", // Standard proxy header

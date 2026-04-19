@@ -9,7 +9,7 @@ A small Node.js/Express app that shows **your public IP address** in a clean web
 
 ## What you get
 
-- **Web UI**: IP (and hostname when available), location, ISP, dark mode, copy-to-clipboard
+- **Web UI**: IP (and hostname when available), location, ISP, dark/light mode toggle, copy-to-clipboard
 - **API**: HTML / JSON / Text formats + dedicated endpoints
 - **Optional IPInfo enrichment**: works without a token, but fewer details
 
@@ -167,13 +167,19 @@ curl -sS http://localhost:3000/api/info
 ```
 
 ### 3) Simulate a real public IP locally
-When testing on localhost you’ll often see `::1` or private addresses. You can simulate a public client IP by providing a forwarded header:
+When testing on localhost you’ll often see `::1` or private addresses. Set `DEV_IP` in your `.env` to override the detected IP for all requests:
+
+```bash
+DEV_IP=8.8.8.8
+```
+
+Then restart the server. Remove or comment it out before deploying.
+
+Alternatively, you can pass the header directly in `curl` without any code changes:
 
 ```bash
 curl -sS -H "x-forwarded-for: 8.8.8.8" http://localhost:3000/api/info
 ```
-
-This is helpful for confirming IPInfo hostname/location behavior without deploying behind a real proxy/CDN.
 
 ---
 
@@ -185,11 +191,13 @@ Create `.env` (optional):
 ```bash
 PORT=3000
 IPINFO_TOKEN=your_token_here
+DEV_IP=8.8.8.8   # optional: override detected IP during local development
 ```
 
 Notes:
 - Without `IPINFO_TOKEN`, the service still runs and returns your IP, but enrichment may be missing.
 - IPInfo has a free tier; see https://ipinfo.io/
+- `DEV_IP` is for local development only — remove it before deploying.
 
 ---
 

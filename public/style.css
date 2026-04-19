@@ -73,6 +73,45 @@
     --transition-slow: 350ms ease;
 }
 
+/* Manual theme override via data-theme attribute */
+[data-theme="dark"] {
+    --bg-primary: rgba(13, 17, 23, 0.55);
+    --bg-secondary: rgba(22, 27, 34, 0.6);
+    --bg-tertiary: rgba(28, 33, 40, 0.6);
+    --text-primary: #e6edf3;
+    --text-secondary: #adbac7;
+    --text-tertiary: #768390;
+    --accent-primary: #58a6ff;
+    --accent-hover: #79b8ff;
+    --accent-light: #1c2d41;
+    --success: #3fb950;
+    --error: #f85149;
+    --error-bg: #2d1517;
+    --border-color: #30363d;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] {
+    --bg-primary: rgba(248, 249, 250, 0.55);
+    --bg-secondary: rgba(255, 255, 255, 0.6);
+    --bg-tertiary: rgba(233, 236, 239, 0.6);
+    --text-primary: #1a1a2e;
+    --text-secondary: #495057;
+    --text-tertiary: #6c757d;
+    --accent-primary: #0066cc;
+    --accent-hover: #0052a3;
+    --accent-light: #e6f2ff;
+    --success: #28a745;
+    --error: #dc3545;
+    --error-bg: #fff5f5;
+    --border-color: #dee2e6;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
 /* Dark Mode */
 @media (prefers-color-scheme: dark) {
     :root {
@@ -153,10 +192,20 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
-    .flag-bg--visible {
+    :root:not([data-theme]) .flag-bg--visible {
         opacity: 0.9;
         filter: blur(12px) saturate(1.8) brightness(0.4) contrast(1.4);
     }
+}
+
+[data-theme="dark"] .flag-bg--visible {
+    opacity: 0.9;
+    filter: blur(12px) saturate(1.8) brightness(0.4) contrast(1.4);
+}
+
+[data-theme="light"] .flag-bg--visible {
+    opacity: 0.7;
+    filter: blur(12px) saturate(0.8);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -164,6 +213,68 @@ body {
         transition: none;
     }
 }
+
+/* ============================================
+   Theme Toggle Button
+   ============================================ */
+.btn-theme-toggle {
+    position: fixed;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background-color: var(--bg-secondary);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.btn-theme-toggle:hover {
+    background-color: var(--accent-light);
+    color: var(--accent-primary);
+    box-shadow: var(--shadow-lg);
+    transform: scale(1.05);
+}
+
+.btn-theme-toggle:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+.btn-theme-toggle svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Show sun in dark mode, moon in light mode */
+.icon-moon { display: none; }
+.icon-sun  { display: block; }
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .icon-moon,
+    [data-theme="dark"] .icon-moon { display: block; }
+    :root:not([data-theme]) .icon-sun,
+    [data-theme="dark"] .icon-sun  { display: none; }
+}
+
+[data-theme="dark"] .icon-moon { display: block; }
+[data-theme="dark"] .icon-sun  { display: none; }
+[data-theme="light"] .icon-moon { display: none; }
+[data-theme="light"] .icon-sun  { display: block; }
 
 /* ============================================
    Layout
@@ -187,29 +298,117 @@ body {
 }
 
 /* ============================================
-   Loading State
+   Loading State — Skeleton Loader
    ============================================ */
 .loading {
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: var(--spacing-xl);
+    width: 100%;
+    max-width: 800px;
+}
+
+@keyframes shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+}
+
+.skeleton {
+    border-radius: var(--radius-sm);
+    background: linear-gradient(
+        90deg,
+        var(--bg-tertiary) 25%,
+        var(--border-color) 50%,
+        var(--bg-tertiary) 75%
+    );
+    background-size: 600px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-ip-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xs);
+    width: 100%;
+}
+
+.skeleton-label {
+    width: 140px;
+    height: 1.25rem;
+    border-radius: var(--radius-sm);
+}
+
+.skeleton-ip {
+    width: clamp(280px, 50vw, 560px);
+    height: clamp(3rem, 8vw, 5rem);
+    border-radius: var(--radius-lg);
+}
+
+.skeleton-hostname {
+    width: 200px;
+    height: 0.875rem;
+    border-radius: var(--radius-sm);
+}
+
+.skeleton-card {
+    background-color: var(--bg-secondary);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-md);
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+}
+
+@media (min-width: 640px) {
+    .skeleton-card {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.skeleton-info-item {
+    display: flex;
+    align-items: flex-start;
     gap: var(--spacing-md);
-    text-align: center;
-    color: var(--text-secondary);
+    padding: var(--spacing-md);
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-md);
 }
 
-.spinner {
-    width: 48px;
-    height: 48px;
-    border: 4px solid var(--border-color);
-    border-top-color: var(--accent-primary);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+.skeleton-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
 }
 
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
+.skeleton-text-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.skeleton-text-sm {
+    width: 60px;
+    height: 0.75rem;
+}
+
+.skeleton-text-md {
+    width: 140px;
+    height: 1.1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton {
+        animation: none;
+        background: var(--bg-tertiary);
     }
 }
 
@@ -257,6 +456,12 @@ body {
 
 .btn-retry:active {
     transform: translateY(0);
+}
+
+.btn-retry:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-primary) 28%, transparent);
 }
 
 /* ============================================
@@ -319,10 +524,13 @@ body {
     column-gap: var(--spacing-sm);
     row-gap: 0.125rem;
     background-color: var(--bg-secondary);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
+    min-width: clamp(280px, 50vw, 560px);
     max-width: 100%;
     transition:
         transform var(--transition-fast),
@@ -434,6 +642,8 @@ body {
 
 .info-card {
     background-color: var(--bg-secondary);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     padding: var(--spacing-md);
@@ -460,7 +670,11 @@ body {
     background-color: var(--bg-tertiary);
     border-radius: var(--radius-md);
     transition: background-color var(--transition-fast);
+    animation: fadeIn 0.5s ease both;
 }
+
+.info-item:nth-child(1) { animation-delay: 0.1s; }
+.info-item:nth-child(2) { animation-delay: 0.2s; }
 
 .info-item:hover {
     background-color: var(--accent-light);
@@ -488,6 +702,29 @@ body {
     font-weight: 600;
     color: var(--text-primary);
     word-break: break-word;
+}
+
+/* ============================================
+   Inline Flag Icon (mobile only)
+   ============================================ */
+.info-value {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.location-flag {
+    display: inline-block;
+    font-size: 1.25em;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+    .location-flag {
+        display: none;
+    }
 }
 
 /* ============================================
@@ -558,7 +795,7 @@ body {
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 639px) {
     .ip-wrapper {
         width: 100%;
         max-width: 100%;
@@ -640,10 +877,6 @@ body {
         transition-duration: 0.01ms !important;
     }
 
-    .spinner {
-        animation: none;
-        border-top-color: var(--accent-primary);
-    }
 }
 
 /* ============================================
