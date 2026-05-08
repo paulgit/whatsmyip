@@ -1,6 +1,7 @@
 services:
   whatsmyip:
     container_name: whatsmyip
+    build: .
     image: code.paulg.it/paulgit/whatsmyip
     ports:
       - "3000:3000"
