@@ -65,6 +65,61 @@ If you want a smaller image and you’re building on Apple Silicon, build a sing
 docker build --platform linux/amd64 -t whatsmyip .
 ```
 
+
+## Building with `docker-build.sh`
+
+The preferred way to build the Docker image is via the included `docker-build.sh` script. It handles multi-platform builds, vulnerability scanning, and smart tagging based on your git state.
+
+### Basic usage
+
+```bash
+# Local build + vulnerability scan (default: linux/amd64)
+./docker-build.sh
+
+# Build, scan, and push to the registry
+./docker-build.sh --push
+
+# Build for ARM64
+./docker-build.sh --platform linux/arm64
+
+# Multi-platform build and push
+./docker-build.sh --push --platform linux/amd64,linux/arm64
+
+# Override the registry
+./docker-build.sh --registry myregistry.io/whatsmyip
+```
+
+### Build types and tagging
+
+The script detects the git state and produces one of three build types:
+
+| Build type | Condition | Image tag | `latest` tag? |
+|:---|:---|:---|:---:|
+| **Release** | Clean working tree + current commit has a git tag matching `package.json` version | `whatsmyip:1.2.3` | ✅ |
+| **Dev** | Clean working tree + no matching git tag | `whatsmyip:1.2.3-dev-a1b2c3d` | ❌ |
+| **Dirty** | Uncommitted changes | `whatsmyip:1.2.3-dirty-a1b2c3d` | ❌ |
+
+**Only release builds get the `latest` tag.** This prevents unstable or in-development images from being accidentally deployed.
+
+### Creating a release build
+
+1. Bump the version in `package.json`
+2. Commit the change
+3. Create a matching git tag (strip the `v` prefix to match the version):
+   ```bash
+   git tag -a v1.2.3 -m "Release v1.2.3"
+   ```
+4. Run the build:
+   ```bash
+   ./docker-build.sh --push
+   ```
+
+### Vulnerability scanning
+
+Every build is automatically scanned for vulnerabilities before any push. The scan uses `scripts/scan-image.sh` (which supports Trivy or Grype). If the scan finds issues at or above the configured severity threshold, the push is blocked.
+
+For multi-platform builds, only the first listed platform is scanned locally. The script will warn you about this and rebuild for all platforms only if the scan passes.
+
 ---
 
 ## Docker Compose (production-like vs development)
