@@ -1,22 +1,34 @@
 #!/usr/bin/env bash
 
 # ---------------------------------------------------------------------------
-# docker-build.sh — Build (and optionally push) the Docker image.
+# docker-build.sh — Build, scan, and optionally push the Docker image.
+#
+# The image is always built locally and scanned for vulnerabilities before
+# any push.  A push is blocked if the scan finds issues at or above the
+# configured severity threshold.
+#
+# Build types:
+#   release  — Clean working tree, current commit has an exact git tag matching
+#              package.json version. Tags: <version> + latest.
+#   dev      — Clean working tree, no matching git tag. Tag: <version>-dev-<sha>.
+#   dirty    — Uncommitted changes. Tag: <version>-dirty-<sha>.
 #
 # Usage:
 #   ./docker-build.sh [OPTIONS]
 #
 # Options:
-#   --push              Push the image to the registry after building.
+#   --push              Push the image to the registry after a clean scan.
 #   --platform <arch>   Target platform (default: linux/amd64).
 #                       Supports any value accepted by `docker buildx --platform`.
+#                       Multi-platform (comma-separated) is supported with --push;
+#                       the scan always uses the first listed platform.
 #   --registry <url>    Override the default image registry/repo prefix.
 #   --help              Show this help message and exit.
 #
 # Examples:
-#   ./docker-build.sh                            # Local build, linux/amd64
-#   ./docker-build.sh --push                     # Build and push
-#   ./docker-build.sh --platform linux/arm64     # Local ARM64 build
+#   ./docker-build.sh                            # Local build + scan, linux/amd64
+#   ./docker-build.sh --push                     # Build, scan, and push
+#   ./docker-build.sh --platform linux/arm64     # Local ARM64 build + scan
 #   ./docker-build.sh --push --platform linux/amd64,linux/arm64  # Multi-arch push
 # ---------------------------------------------------------------------------
 
@@ -44,7 +56,7 @@ error() { echo -e "${RED}[ERROR]${RESET} $*" >&2; }
 
 # ── Usage / help ────────────────────────────────────────────────────────────
 usage() {
-  grep -E '^#( |$)' "$0" | head -n 18 | sed 's/^# \{0,1\}//'
+  grep -E '^#( |$)' "$0" | head -n 26 | sed 's/^# \{0,1\}//'
   exit 0
 }
 
@@ -95,47 +107,103 @@ fi
 # ── Gather metadata ────────────────────────────────────────────────────────
 APP_VERSION=$(node -p "require('./package.json').version")
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_TAG=$(git describe --tags --exact-match 2>/dev/null | sed 's/^v//' || true)
 
-# Warn if the working tree has uncommitted changes
+# Determine build type and image tag
+IS_DIRTY=false
 if [[ $(git status --porcelain 2>/dev/null | wc -l | tr -d ' ') -ne 0 ]]; then
-  warn "Git working tree is dirty — the image will contain uncommitted changes."
+  IS_DIRTY=true
 fi
 
-# ── Build ───────────────────────────────────────────────────────────────────
-IMAGE_TAG="${IMAGE_REGISTRY}:${APP_VERSION}"
+if ${IS_DIRTY}; then
+  BUILD_TYPE="dirty"
+  IMAGE_TAG="${IMAGE_REGISTRY}:${APP_VERSION}-dirty-${GIT_SHA}"
+  warn "Git working tree is dirty — this is a ${YELLOW}dirty${RESET} build."
+elif [[ "${GIT_TAG}" == "${APP_VERSION}" ]]; then
+  BUILD_TYPE="release"
+  IMAGE_TAG="${IMAGE_REGISTRY}:${APP_VERSION}"
+else
+  BUILD_TYPE="dev"
+  IMAGE_TAG="${IMAGE_REGISTRY}:${APP_VERSION}-dev-${GIT_SHA}"
+  warn "No matching git tag for v${APP_VERSION} — this is a ${YELLOW}dev${RESET} build."
+fi
 
-info "Version  : ${CYAN}${APP_VERSION}${RESET}"
-info "Git SHA  : ${CYAN}${GIT_SHA}${RESET}"
-info "Platform : ${CYAN}${TARGET_PLATFORM}${RESET}"
-info "Image    : ${CYAN}${IMAGE_TAG}${RESET}"
-info "Mode     : ${CYAN}$(${PUSH} && echo 'build + push' || echo 'local build')${RESET}"
-echo ""
+# ── Shared OCI labels ────────────────────────────────────────────────────────
+IS_MULTIPLATFORM=false
+[[ "${TARGET_PLATFORM}" == *","* ]] && IS_MULTIPLATFORM=true
 
-BUILD_ARGS=(
+# For the local build (needed for scanning), always use a single platform.
+# Multi-platform images cannot be loaded into the local daemon.
+SCAN_PLATFORM="${TARGET_PLATFORM%%,*}"
+
+LABEL_ARGS=(
   --build-arg "ENV_APP_VERSION=${APP_VERSION}"
-  --platform "${TARGET_PLATFORM}"
   --label "org.opencontainers.image.revision=${GIT_SHA}"
   --label "org.opencontainers.image.source=https://${IMAGE_REGISTRY}"
   --label "org.opencontainers.image.title=whatsmyip"
   --label "org.opencontainers.image.description=A simple service to display your external IP address with geolocation information"
   --label "org.opencontainers.image.version=${APP_VERSION}"
   --tag "${IMAGE_TAG}"
-  --tag "${IMAGE_REGISTRY}:latest"
 )
 
-if ${PUSH}; then
-  BUILD_ARGS+=(--push)
-else
-  # --load imports the image into the local Docker daemon. It only works for
-  # single-platform builds; multi-platform builds require --push.
-  if [[ "${TARGET_PLATFORM}" == *","* ]]; then
-    error "Multi-platform builds require --push (cannot --load multiple platforms)."
-    exit 1
-  fi
-  BUILD_ARGS+=(--load)
+# Only tag latest on release builds
+if [[ "${BUILD_TYPE}" == "release" ]]; then
+  LABEL_ARGS+=(--tag "${IMAGE_REGISTRY}:latest")
 fi
 
-docker buildx build "${BUILD_ARGS[@]}" .
+info "Version  : ${CYAN}${APP_VERSION}${RESET}"
+info "Git SHA  : ${CYAN}${GIT_SHA}${RESET}"
+info "Platform : ${CYAN}${TARGET_PLATFORM}${RESET}"
+info "Image    : ${CYAN}${IMAGE_TAG}${RESET}"
+info "Build    : ${CYAN}${BUILD_TYPE}${RESET}"
+info "Mode     : ${CYAN}$(${PUSH} && echo 'build + scan + push' || echo 'local build + scan')${RESET}"
+echo ""
+
+# ── Build locally (always, so the image can be scanned) ─────────────────────
+if $IS_MULTIPLATFORM; then
+  info "Multi-platform build detected — scanning ${CYAN}${SCAN_PLATFORM}${RESET} only."
+fi
+
+docker buildx build "${LABEL_ARGS[@]}" --platform "${SCAN_PLATFORM}" --load .
+
+# ── Scan ─────────────────────────────────────────────────────────────────────
+echo ""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCAN_SCRIPT="${SCRIPT_DIR}/scripts/scan-image.sh"
+
+SCAN_EXIT_CODE=0
+if [[ -x "$SCAN_SCRIPT" ]]; then
+  info "Running vulnerability scan..."
+  echo ""
+  "$SCAN_SCRIPT" "${IMAGE_TAG}" || SCAN_EXIT_CODE=$?
+else
+  error "Scan script not found or not executable: ${SCAN_SCRIPT}"
+  exit 1
+fi
+
+if [[ $SCAN_EXIT_CODE -ne 0 ]]; then
+  echo ""
+  error "Vulnerability scan failed — image will not be pushed."
+  exit "$SCAN_EXIT_CODE"
+fi
+
+# ── Push (only if scan passed) ───────────────────────────────────────────────
+if ${PUSH}; then
+  echo ""
+  if $IS_MULTIPLATFORM; then
+    # --load is not supported for multi-platform; rebuild targeting all arches.
+    warn "Multi-platform push: only ${SCAN_PLATFORM} was scanned. Other platforms are unscanned."
+    info "Rebuilding for multi-platform push: ${CYAN}${TARGET_PLATFORM}${RESET}"
+    echo ""
+    docker buildx build "${LABEL_ARGS[@]}" --platform "${TARGET_PLATFORM}" --push .
+  else
+    info "Pushing ${CYAN}${IMAGE_TAG}${RESET}..."
+    docker push "${IMAGE_TAG}"
+    if [[ "${BUILD_TYPE}" == "release" ]]; then
+      docker push "${IMAGE_REGISTRY}:latest"
+    fi
+  fi
+fi
 
 echo ""
 info "Done — ${CYAN}${IMAGE_TAG}${RESET} (${GIT_SHA})"
