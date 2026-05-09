@@ -41,22 +41,25 @@ PUSH=false
 
 # ── Colour helpers (disabled when stdout is not a terminal) ─────────────────
 if [ -t 1 ]; then
-  RED='\033[0;31m'
-  YELLOW='\033[0;33m'
-  GREEN='\033[0;32m'
-  CYAN='\033[0;36m'
-  RESET='\033[0m'
+  RED=$'\033[0;31m'
+  YELLOW=$'\033[0;33m'
+  GREEN=$'\033[0;32m'
+  CYAN=$'\033[0;36m'
+  RESET=$'\033[0m'
+  info()  { printf "${GREEN}[INFO]${RESET}  %s\n" "$*"; }
+  warn()  { printf "${YELLOW}[WARN]${RESET}  %s\n" "$*" >&2; }
+  error() { printf "${RED}[ERROR]${RESET} %s\n" "$*" >&2; }
 else
   RED='' YELLOW='' GREEN='' CYAN='' RESET=''
+  info()  { echo "[INFO]  $*"; }
+  warn()  { echo "[WARN]  $*" >&2; }
+  error() { echo "[ERROR] $*" >&2; }
 fi
-
-info()  { echo -e "${GREEN}[INFO]${RESET}  $*"; }
-warn()  { echo -e "${YELLOW}[WARN]${RESET}  $*" >&2; }
-error() { echo -e "${RED}[ERROR]${RESET} $*" >&2; }
 
 # ── Usage / help ────────────────────────────────────────────────────────────
 usage() {
   grep -E '^#( |$)' "$0" | head -n 26 | sed 's/^# \{0,1\}//'
+  echo ""
   exit 0
 }
 
