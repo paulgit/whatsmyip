@@ -42,19 +42,19 @@ set -euo pipefail
 
 # ── Colour helpers (disabled when stdout is not a terminal) ─────────────────
 if [ -t 1 ]; then
-  RED='\033[0;31m'
-  YELLOW='\033[0;33m'
-  GREEN='\033[0;32m'
-  CYAN='\033[0;36m'
-  BOLD='\033[1m'
-  RESET='\033[0m'
+  RED=$'\033[0;31m'
+  YELLOW=$'\033[0;33m'
+  GREEN=$'\033[0;32m'
+  CYAN=$'\033[0;36m'
+  BOLD=$'\033[1m'
+  RESET=$'\033[0m'
 else
   RED='' YELLOW='' GREEN='' CYAN='' BOLD='' RESET=''
 fi
 
-info()  { echo -e "${GREEN}[INFO]${RESET}  $*"; }
-warn()  { echo -e "${YELLOW}[WARN]${RESET}  $*" >&2; }
-error() { echo -e "${RED}[ERROR]${RESET} $*" >&2; }
+info()  { printf "${GREEN}[INFO]${RESET}  %s\n" "$*"; }
+warn()  { printf "${YELLOW}[WARN]${RESET}  %s\n" "$*" >&2; }
+error() { printf "${RED}[ERROR]${RESET} %s\n" "$*" >&2; }
 
 # ── Usage / help ────────────────────────────────────────────────────────────
 usage() {
@@ -134,7 +134,7 @@ if [[ "$SCANNER" == "trivy" ]]; then
   if ! command -v trivy >/dev/null 2>&1; then
     error "Trivy is not installed."
     error "Install: https://aquasecurity.github.io/trivy/latest/getting-started/installation/"
-    error ""
+    echo >&2
     error "  brew install trivy          # macOS"
     error "  curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin"
     exit 2
@@ -143,7 +143,7 @@ else
   if ! command -v grype >/dev/null 2>&1; then
     error "Grype is not installed."
     error "Install: https://github.com/anchore/grype#installation"
-    error ""
+    echo >&2
     error "  brew install grype          # macOS"
     error "  curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin"
     exit 2
