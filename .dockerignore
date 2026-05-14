@@ -53,6 +53,9 @@ yarn-error.log*
 .gitlab-ci.yml
 .travis.yml
 
+# MaxMind GeoLite2 databases (downloaded during build)
+geodata/
+
 # Local deployment/runtime files not needed for image build
 vercel.json
 docker-compose.yml

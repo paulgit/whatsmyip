@@ -1,7 +1,11 @@
 services:
   whatsmyip:
     container_name: whatsmyip
-    build: .
+    build:
+      context: .
+      args:
+        MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
+        MAXMIND_ACCOUNT_ID: ${MAXMIND_ACCOUNT_ID:-}
     image: code.paulg.it/paulgit/whatsmyip
     ports:
       - "3000:3000"
@@ -9,8 +13,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      # Provide via host environment or CI/CD secrets:
-      #   export IPINFO_TOKEN=...
-      IPINFO_TOKEN: ${IPINFO_TOKEN:-}
+      # MaxMind GeoLite2 credentials (used only at build time for Docker;
+      # for local dev, run: npm run download-geodata)
+      MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
+      MAXMIND_ACCOUNT_ID: ${MAXMIND_ACCOUNT_ID:-}
 
     restart: unless-stopped
