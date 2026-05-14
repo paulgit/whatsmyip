@@ -23,14 +23,16 @@ RUN mkdir -p /app/geodata && \
         BASE_URL="https://download.maxmind.com/app/geoip_download"; \
         echo "Downloading GeoLite2-City..."; \
         mkdir -p /tmp/mmdb-city && \
-        curl -Ls --fail "${BASE_URL}?edition_id=GeoLite2-City&${QUERY}" | \
-            tar -xz --strip-components=1 -C /tmp/mmdb-city && \
+        curl -Ls --fail -o /tmp/city.tar.gz "${BASE_URL}?edition_id=GeoLite2-City&${QUERY}" && \
+        tar -xzf /tmp/city.tar.gz --strip-components=1 -C /tmp/mmdb-city && \
+        rm /tmp/city.tar.gz && \
         mv /tmp/mmdb-city/GeoLite2-City.mmdb /app/geodata/ && \
         rm -rf /tmp/mmdb-city && \
         echo "Downloading GeoLite2-ASN..."; \
         mkdir -p /tmp/mmdb-asn && \
-        curl -Ls --fail "${BASE_URL}?edition_id=GeoLite2-ASN&${QUERY}" | \
-            tar -xz --strip-components=1 -C /tmp/mmdb-asn && \
+        curl -Ls --fail -o /tmp/asn.tar.gz "${BASE_URL}?edition_id=GeoLite2-ASN&${QUERY}" && \
+        tar -xzf /tmp/asn.tar.gz --strip-components=1 -C /tmp/mmdb-asn && \
+        rm /tmp/asn.tar.gz && \
         mv /tmp/mmdb-asn/GeoLite2-ASN.mmdb /app/geodata/ && \
         rm -rf /tmp/mmdb-asn; \
     else \

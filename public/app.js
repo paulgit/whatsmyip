@@ -42,7 +42,9 @@
       if (stored) document.documentElement.setAttribute("data-theme", stored);
       themeToggle.addEventListener("click", () => {
         const current = document.documentElement.getAttribute("data-theme");
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
         const isDark = current === "dark" || (!current && prefersDark);
         const next = isDark ? "light" : "dark";
         document.documentElement.setAttribute("data-theme", next);

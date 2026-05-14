@@ -34,7 +34,9 @@ async function initGeoIP() {
     console.log("GeoIP City database loaded");
   } catch (err) {
     console.warn("GeoLite2-City database not available:", err.message);
-    console.warn("Geolocation data will be unavailable. Run 'npm run download-geodata' to fetch the database.");
+    console.warn(
+      "Geolocation data will be unavailable. Run 'npm run download-geodata' to fetch the database.",
+    );
   }
 
   try {
