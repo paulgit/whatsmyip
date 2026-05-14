@@ -1,6 +1,7 @@
 /**
  * What's My IP Server
  * Express-based service to display external IP addresses with geolocation
+ * Uses MaxMind GeoLite2 databases for local, fast lookups
  *
  * @author Paul Git <paulgit@pm.me>
  * @license MIT
@@ -9,12 +10,42 @@
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
+const maxmind = require("maxmind");
 
 const FLAG_ICONS_PATH = path.join(__dirname, "node_modules", "flag-icons");
+const GEODATA_DIR = path.join(__dirname, "geodata");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const IPINFO_TOKEN = process.env.IPINFO_TOKEN || "";
+
+let cityReader = null;
+let asnReader = null;
+
+/**
+ * Initialise MaxMind GeoIP database readers
+ * Loads GeoLite2-City and GeoLite2-ASN .mmdb files from the geodata directory
+ */
+async function initGeoIP() {
+  const cityDbPath = path.join(GEODATA_DIR, "GeoLite2-City.mmdb");
+  const asnDbPath = path.join(GEODATA_DIR, "GeoLite2-ASN.mmdb");
+
+  try {
+    cityReader = await maxmind.open(cityDbPath);
+    console.log("GeoIP City database loaded");
+  } catch (err) {
+    console.warn("GeoLite2-City database not available:", err.message);
+    console.warn(
+      "Geolocation data will be unavailable. Run 'npm run download-geodata' to fetch the database.",
+    );
+  }
+
+  try {
+    asnReader = await maxmind.open(asnDbPath);
+    console.log("GeoIP ASN database loaded");
+  } catch (err) {
+    console.warn("GeoLite2-ASN database not available:", err.message);
+  }
+}
 
 // Middleware to disable caching
 app.use((req, res, next) => {
@@ -34,10 +65,10 @@ function getClientIP(req) {
   if (process.env.DEV_IP) return process.env.DEV_IP;
 
   const headers = [
-    "cf-connecting-ip", // Cloudflare
-    "x-forwarded-for", // Standard proxy header
-    "x-real-ip", // Nginx proxy
-    "x-cluster-client-ip", // Rackspace LB
+    "cf-connecting-ip",
+    "x-forwarded-for",
+    "x-real-ip",
+    "x-cluster-client-ip",
     "x-forwarded",
     "forwarded-for",
     "forwarded",
@@ -46,31 +77,25 @@ function getClientIP(req) {
   for (const header of headers) {
     const value = req.headers[header];
     if (value) {
-      // Handle comma-separated IPs (take the first one)
       const ip = value.split(",")[0].trim();
 
-      // Validate it's a proper IP (not private/reserved)
       if (isValidPublicIP(ip)) {
         return ip;
       }
     }
   }
 
-  // Fallback to socket address
   return req.socket.remoteAddress || req.connection.remoteAddress;
 }
 
 /**
  * Basic validation for public IP addresses
- * This is a simplified check - in production you might want more robust validation
  */
 function isValidPublicIP(ip) {
   if (!ip) return false;
 
-  // Remove IPv6 prefix if present
   const cleanIP = ip.replace(/^::ffff:/, "");
 
-  // Check for private IP ranges (simplified)
   const privateRanges = [
     /^10\./,
     /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
@@ -91,27 +116,70 @@ function isValidPublicIP(ip) {
 }
 
 /**
- * Fetch geolocation data from ipinfo.io
+ * Look up geolocation data from local MaxMind databases
+ * Synchronous lookup — typically completes in 1-5ms
  */
-async function getIPInfo(ip) {
-  if (!IPINFO_TOKEN) {
-    return null;
-  }
+function getIPInfo(ip) {
+  const result = {};
+  let hasData = false;
 
-  try {
-    const url = `https://ipinfo.io/${ip}?token=${IPINFO_TOKEN}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error(`IPInfo API error: ${response.status}`);
-      return null;
+  if (cityReader) {
+    try {
+      const city = cityReader.get(ip);
+      if (city) {
+        if (city.city?.names?.en) {
+          result.city = city.city.names.en;
+          hasData = true;
+        }
+        if (city.subdivisions?.[0]?.names?.en) {
+          result.region = city.subdivisions[0].names.en;
+          hasData = true;
+        }
+        if (city.country?.iso_code) {
+          result.country = city.country.iso_code;
+          hasData = true;
+        }
+        if (city.country?.names?.en) {
+          result.country_name = city.country.names.en;
+          hasData = true;
+        }
+        if (city.postal?.code) {
+          result.postal = city.postal.code;
+          hasData = true;
+        }
+        if (city.location?.time_zone) {
+          result.timezone = city.location.time_zone;
+          hasData = true;
+        }
+        if (city.location?.latitude && city.location?.longitude) {
+          result.loc = `${city.location.latitude},${city.location.longitude}`;
+          hasData = true;
+        }
+      }
+    } catch (err) {
+      console.error("City lookup error:", err.message);
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching IP info:", error);
-    return null;
   }
+
+  if (asnReader) {
+    try {
+      const asn = asnReader.get(ip);
+      if (asn) {
+        if (asn.autonomous_system_organization) {
+          result.org = asn.autonomous_system_organization;
+          hasData = true;
+        }
+        if (asn.autonomous_system_number) {
+          result.asn = `AS${asn.autonomous_system_number}`;
+          hasData = true;
+        }
+      }
+    } catch (err) {
+      console.error("ASN lookup error:", err.message);
+    }
+  }
+
+  return hasData ? result : null;
 }
 
 // API Endpoints
@@ -124,10 +192,9 @@ app.get("/", async (req, res) => {
   const clientIP = getClientIP(req);
 
   if (format === "json") {
-    const ipInfo = await getIPInfo(clientIP);
+    const ipInfo = getIPInfo(clientIP);
     return res.json({
       ip: clientIP,
-      hostname: ipInfo?.hostname || "Unknown",
       ...ipInfo,
     });
   }
@@ -136,7 +203,6 @@ app.get("/", async (req, res) => {
     return res.type("text/plain").send(clientIP);
   }
 
-  // Default: serve HTML
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
@@ -161,28 +227,33 @@ app.get("/api/ip", (req, res) => {
 /**
  * GET /api/info - Get IP address with geolocation data
  */
-app.get("/api/info", async (req, res) => {
+app.get("/api/info", (req, res) => {
   const clientIP = getClientIP(req);
-  const ipInfo = await getIPInfo(clientIP);
+  const ipInfo = getIPInfo(clientIP);
 
   if (!ipInfo) {
     return res.json({
       ip: clientIP,
-      hostname: "Unknown",
       error: "Geolocation data unavailable",
     });
   }
 
   res.json({
     ip: clientIP,
-    hostname: ipInfo.hostname || "Unknown",
     ...ipInfo,
   });
 });
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    geoip: {
+      city: cityReader ? "loaded" : "unavailable",
+      asn: asnReader ? "loaded" : "unavailable",
+    },
+  });
 });
 
 // 404 handler
@@ -197,9 +268,11 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 What's My IP server running on http://localhost:${PORT}`);
-  console.log(
-    `📍 IPInfo token configured: ${IPINFO_TOKEN ? "Yes" : "No (geolocation disabled)"}`,
-  );
+initGeoIP().then(() => {
+  app.listen(PORT, () => {
+    console.log(`What's My IP server running on http://localhost:${PORT}`);
+    console.log(
+      `GeoIP: City ${cityReader ? "loaded" : "unavailable"}, ASN ${asnReader ? "loaded" : "unavailable"}`,
+    );
+  });
 });

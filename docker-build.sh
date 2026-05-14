@@ -34,6 +34,28 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── Load .env if available (docker compose does this automatically, but
+#    bare docker build does not) ──────────────────────────────────────────────
+ENV_FILE="${SCRIPT_DIR}/.env"
+if [ -f "$ENV_FILE" ]; then
+  # Only export variables that aren't already set in the environment.
+  # This reads KEY=VALUE lines (ignoring comments and blanks) and exports them.
+  while IFS='=' read -r key value; do
+    case "$key" in
+      ''|\#*) continue ;;
+    esac
+    # Strip surrounding quotes from value
+    value="${value#\"}" ; value="${value%\"}"
+    value="${value#\'}" ; value="${value%\'}"
+    # Don't override values already in the environment
+    if [ -z "${!key:-}" ]; then
+      export "$key=$value"
+    fi
+  done < <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$ENV_FILE")
+fi
+
 # ── Defaults ────────────────────────────────────────────────────────────────
 IMAGE_REGISTRY="code.paulg.it/paulgit/whatsmyip"
 TARGET_PLATFORM="linux/amd64"
@@ -58,7 +80,7 @@ fi
 
 # ── Usage / help ────────────────────────────────────────────────────────────
 usage() {
-  grep -E '^#( |$)' "$0" | head -n 26 | sed 's/^# \{0,1\}//'
+  grep -E '^#( |$)' "$0" | head -n 23 | sed 's/^# \{0,1\}//'
   echo ""
   exit 0
 }
@@ -141,6 +163,8 @@ SCAN_PLATFORM="${TARGET_PLATFORM%%,*}"
 
 LABEL_ARGS=(
   --build-arg "ENV_APP_VERSION=${APP_VERSION}"
+  --build-arg "MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY:-}"
+  --build-arg "MAXMIND_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID:-}"
   --label "org.opencontainers.image.revision=${GIT_SHA}"
   --label "org.opencontainers.image.source=https://${IMAGE_REGISTRY}"
   --label "org.opencontainers.image.title=whatsmyip"

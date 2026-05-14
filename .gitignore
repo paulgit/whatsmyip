@@ -53,5 +53,8 @@ build/
 *.tsbuildinfo
 .cache/
 
+# MaxMind GeoLite2 databases (downloaded separately)
+geodata/
+
 # Keep the old PHP config but ignore it
 config.php
