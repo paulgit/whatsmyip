@@ -1,6 +1,6 @@
 /**
  * What's My IP - Client Application
- * Handles fetching and displaying IP information with error handling
+ * Two-phase rendering: IP displayed immediately, geolocation loaded async
  *
  * @author Paul Git <paulgit@pm.me>
  * @license MIT
@@ -50,50 +50,89 @@
       });
     }
 
-    // Fetch IP information
+    // Fetch IP information (two-phase: IP first, then geolocation)
     fetchIPInfo();
   }
 
   /**
-   * Fetch IP information from the API
+   * Two-phase fetch: get IP immediately, then load geolocation data
+   *
+   * Phase 1: /api/ip — instant, no database lookup needed
+   * Phase 2: /api/info — local MaxMind lookup (~1-5ms), fills in location/ISP/flag
    */
   async function fetchIPInfo() {
     showLoading();
 
+    // Fire both requests concurrently
+    const ipPromise = fetchIP();
+    const infoPromise = fetchGeoInfo();
+
+    // Phase 1: Display IP address as soon as it's available
     try {
-      const response = await fetch("/api/info", {
-        headers: {
-          Accept: "application/json",
-        },
-      });
+      const ipData = await ipPromise;
+      currentIP = ipData.ip || "--";
+      elements.ipAddress.textContent = currentIP;
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      if (data.error && !data.country) {
-        throw new Error(data.error);
-      }
-
-      currentIP = data.ip;
-      displayIPInfo(data);
+      // Show main content with IP; location shows shimmer placeholders
       showMainContent();
     } catch (error) {
-      console.error("Error fetching IP info:", error);
-      showError(error.message || "Unable to fetch IP information");
+      console.error("Error fetching IP:", error);
+      showError(error.message || "Unable to detect your IP address");
+      return;
+    }
+
+    // Phase 2: Fill in geolocation when it resolves
+    try {
+      const infoData = await infoPromise;
+      displayGeoInfo(infoData);
+    } catch (error) {
+      console.error("Error fetching geolocation:", error);
+      // IP is still visible; just hide the location section
+      hideGeoPlaceholders();
+      elements.locationInfo.style.display = "none";
     }
   }
 
   /**
-   * Display IP information in the UI
+   * Fetch just the IP address from /api/ip
    */
-  function displayIPInfo(data) {
-    // Display IP address
-    const ip = data.ip || "--";
-    elements.ipAddress.textContent = ip;
+  async function fetchIP() {
+    const response = await fetch("/api/ip", {
+      headers: { Accept: "application/json" },
+    });
 
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Fetch geolocation data from /api/info
+   */
+  async function fetchGeoInfo() {
+    const response = await fetch("/api/info", {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (data.error && !data.country) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  }
+
+  /**
+   * Display geolocation information in the UI
+   */
+  function displayGeoInfo(data) {
     // Display location information if available
     if (data.city || data.region || data.country) {
       const locationParts = [];
@@ -138,6 +177,18 @@
     } else {
       elements.isp.textContent = "Unknown";
     }
+
+    // Remove shimmer placeholders once data is loaded
+    elements.location.classList.remove("info-value--loading");
+    elements.isp.classList.remove("info-value--loading");
+  }
+
+  /**
+   * Remove shimmer effect from geo placeholders when geo data is unavailable
+   */
+  function hideGeoPlaceholders() {
+    elements.location.classList.remove("info-value--loading");
+    elements.isp.classList.remove("info-value--loading");
   }
 
   /**
@@ -223,12 +274,16 @@
   }
 
   /**
-   * Show loading state
+   * Show loading state — full skeleton with shimmer on geo placeholders
    */
   function showLoading() {
     elements.loading.classList.remove("hidden");
     elements.error.classList.add("hidden");
     elements.mainContent.classList.add("hidden");
+
+    // Add shimmer to geo value placeholders
+    elements.location.classList.add("info-value--loading");
+    elements.isp.classList.add("info-value--loading");
   }
 
   /**
@@ -242,7 +297,7 @@
   }
 
   /**
-   * Show main content
+   * Show main content — IP is displayed, geo may still be loading
    */
   function showMainContent() {
     elements.mainContent.classList.remove("hidden");

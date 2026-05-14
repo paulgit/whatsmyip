@@ -676,6 +676,28 @@ body {
     word-break: break-word;
 }
 
+/* Shimmer placeholder while geo data loads */
+.info-value--loading {
+    min-width: 120px;
+    border-radius: var(--radius-sm);
+    color: transparent;
+    background: linear-gradient(
+        90deg,
+        var(--bg-tertiary) 25%,
+        var(--border-color) 50%,
+        var(--bg-tertiary) 75%
+    );
+    background-size: 600px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .info-value--loading {
+        animation: none;
+        background: var(--bg-tertiary);
+    }
+}
+
 /* ============================================
    Inline Flag Icon (mobile only)
    ============================================ */
