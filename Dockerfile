@@ -7,50 +7,20 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Install curl and unzip for downloading IP2Location databases
-RUN apk add --no-cache curl unzip
+# Install curl, unzip, and bash for downloading IP2Location databases
+RUN apk add --no-cache curl unzip bash
 
 # Download IP2Location LITE databases
 ARG IP2LOCATION_TOKEN
+COPY scripts/download-geodata.sh ./scripts/download-geodata.sh
 
 RUN mkdir -p /app/geodata && \
     if [ -n "$IP2LOCATION_TOKEN" ]; then \
-        BASE_URL="https://www.ip2location.com/download"; \
-        \
-        echo "Downloading IP2LOCATION-LITE-DB11..."; \
-        curl -Ls --fail -o /tmp/city.bin "${BASE_URL}/?token=${IP2LOCATION_TOKEN}&file=DB11LITEBINIPV6" && \
-        if unzip -t /tmp/city.bin >/dev/null 2>&1; then \
-            unzip -q /tmp/city.bin -d /tmp/city && \
-            find /tmp/city -maxdepth 2 -name '*.BIN' -exec mv {} /app/geodata/IP2LOCATION-LITE-DB11.BIN \; && \
-            rm -rf /tmp/city; \
-        else \
-            mv /tmp/city.bin /app/geodata/IP2LOCATION-LITE-DB11.BIN; \
-        fi && \
-        rm -f /tmp/city.bin && \
-        if [ ! -f /app/geodata/IP2LOCATION-LITE-DB11.BIN ]; then \
-            echo "ERROR: IP2LOCATION-LITE-DB11.BIN was not created."; exit 1; \
-        fi && \
-        echo "  IP2LOCATION-LITE-DB11.BIN OK"; \
-        \
-        echo "Downloading IP2LOCATION-LITE-ASN..."; \
-        curl -Ls --fail -o /tmp/asn.bin "${BASE_URL}/?token=${IP2LOCATION_TOKEN}&file=DBASNLITEBINIPV6" && \
-        if unzip -t /tmp/asn.bin >/dev/null 2>&1; then \
-            unzip -q /tmp/asn.bin -d /tmp/asn && \
-            find /tmp/asn -maxdepth 2 -name '*.BIN' -exec mv {} /app/geodata/IP2LOCATION-LITE-ASN.BIN \; && \
-            rm -rf /tmp/asn; \
-        else \
-            mv /tmp/asn.bin /app/geodata/IP2LOCATION-LITE-ASN.BIN; \
-        fi && \
-        rm -f /tmp/asn.bin && \
-        if [ ! -f /app/geodata/IP2LOCATION-LITE-ASN.BIN ]; then \
-            echo "ERROR: IP2LOCATION-LITE-ASN.BIN was not created."; exit 1; \
-        fi && \
-        echo "  IP2LOCATION-LITE-ASN.BIN OK"; \
+        /app/scripts/download-geodata.sh; \
     else \
         echo "WARNING: IP2LOCATION_TOKEN not provided. Geolocation will be unavailable."; \
         touch /app/geodata/.no-data; \
-    fi && \
-    ls -la /app/geodata/
+    fi
 
 FROM gcr.io/distroless/nodejs24-debian13:nonroot AS runner
 

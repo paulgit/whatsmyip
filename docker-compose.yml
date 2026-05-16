@@ -15,6 +15,5 @@ services:
       # IP2Location LITE token (used only at build time for Docker;
       # for local dev, run: npm run download-geodata)
       IP2LOCATION_TOKEN: ${IP2LOCATION_TOKEN:-}
-      DEV_IP: "8.8.8.8"
 
     restart: unless-stopped

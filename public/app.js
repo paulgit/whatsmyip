@@ -17,6 +17,7 @@
     retryBtn: document.getElementById("retry-btn"),
     mainContent: document.getElementById("main-content"),
     ipAddress: document.getElementById("ip-address"),
+    ipLive: document.getElementById("ip-live"),
     asnDisplay: document.getElementById("asn-display"),
     asnValue: document.getElementById("asn-value"),
     location: document.getElementById("location"),
@@ -90,6 +91,7 @@
       const ipData = await ipPromise;
       currentIP = ipData.ip || "--";
       elements.ipAddress.textContent = currentIP;
+      elements.ipLive.textContent = currentIP;
 
       // Show main content with IP; location shows shimmer placeholders
       showMainContent();
@@ -293,7 +295,7 @@
 
     setTimeout(() => {
       element.classList.remove("copied");
-      element.setAttribute("title", originalTitle || "Click to copy");
+      element.setAttribute("title", "Click to copy");
     }, 2000);
   }
 

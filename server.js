@@ -130,6 +130,14 @@ function isValidPublicIP(ip) {
 }
 
 /**
+ * Return true when a field from IP2Location contains a real value.
+ * The library returns sentinel strings for missing data depending on the DB tier.
+ */
+function isGeoField(val) {
+  return val && val !== "MISSING_FILE" && val !== "-" && val !== "N/A";
+}
+
+/**
  * Look up geolocation data from local IP2Location databases
  * Synchronous lookup — typically completes in 1-5ms
  */
@@ -141,84 +149,17 @@ function getIPInfo(ip) {
     try {
       const city = cityDb.getAll(ip);
       if (city) {
-        if (
-          city.city &&
-          city.city !== "MISSING_FILE" &&
-          city.city !== "-" &&
-          city.city !== "N/A"
-        ) {
-          result.city = city.city;
-          hasData = true;
-        }
-        if (
-          city.region &&
-          city.region !== "MISSING_FILE" &&
-          city.region !== "-" &&
-          city.region !== "N/A"
-        ) {
-          result.region = city.region;
-          hasData = true;
-        }
-        if (
-          city.countryShort &&
-          city.countryShort !== "MISSING_FILE" &&
-          city.countryShort !== "-" &&
-          city.countryShort !== "N/A"
-        ) {
-          result.country = city.countryShort;
-          hasData = true;
-        }
-        if (
-          city.countryLong &&
-          city.countryLong !== "MISSING_FILE" &&
-          city.countryLong !== "-" &&
-          city.countryLong !== "N/A"
-        ) {
-          result.country_name = city.countryLong;
-          hasData = true;
-        }
-        if (
-          city.zipCode &&
-          city.zipCode !== "MISSING_FILE" &&
-          city.zipCode !== "-" &&
-          city.zipCode !== "N/A"
-        ) {
-          result.postal = city.zipCode;
-          hasData = true;
-        }
-        if (
-          city.timeZone &&
-          city.timeZone !== "MISSING_FILE" &&
-          city.timeZone !== "-" &&
-          city.timeZone !== "N/A"
-        ) {
-          result.timezone = city.timeZone;
-          hasData = true;
-        }
-        if (
-          city.latitude &&
-          city.latitude !== "" &&
-          city.latitude !== "MISSING_FILE" &&
-          city.latitude !== "-" &&
-          city.latitude !== "N/A" &&
-          city.longitude &&
-          city.longitude !== "" &&
-          city.longitude !== "MISSING_FILE" &&
-          city.longitude !== "-" &&
-          city.longitude !== "N/A"
-        ) {
+        if (isGeoField(city.city)) { result.city = city.city; hasData = true; }
+        if (isGeoField(city.region)) { result.region = city.region; hasData = true; }
+        if (isGeoField(city.countryShort)) { result.country = city.countryShort; hasData = true; }
+        if (isGeoField(city.countryLong)) { result.country_name = city.countryLong; hasData = true; }
+        if (isGeoField(city.zipCode)) { result.postal = city.zipCode; hasData = true; }
+        if (isGeoField(city.timeZone)) { result.timezone = city.timeZone; hasData = true; }
+        if (isGeoField(city.latitude) && isGeoField(city.longitude)) {
           result.loc = `${city.latitude},${city.longitude}`;
           hasData = true;
         }
-        if (
-          city.isp &&
-          city.isp !== "MISSING_FILE" &&
-          city.isp !== "-" &&
-          city.isp !== "N/A"
-        ) {
-          result.org = city.isp;
-          hasData = true;
-        }
+        if (isGeoField(city.isp)) { result.org = city.isp; hasData = true; }
       }
     } catch (err) {
       console.error("City lookup error:", err.message);
@@ -229,21 +170,11 @@ function getIPInfo(ip) {
     try {
       const asn = asnDb.getAll(ip);
       if (asn) {
-        if (
-          asn.as &&
-          asn.as !== "MISSING_FILE" &&
-          asn.as !== "-" &&
-          asn.as !== "N/A"
-        ) {
-          result.org = asn.as;
+        if (isGeoField(asn.as)) {
+          result.org = asn.as; // ASN org name preferred over city ISP; intentionally overwrites
           hasData = true;
         }
-        if (
-          asn.asn &&
-          asn.asn !== "MISSING_FILE" &&
-          asn.asn !== "-" &&
-          asn.asn !== "N/A"
-        ) {
+        if (isGeoField(asn.asn)) {
           result.asn = `AS${asn.asn}`;
           hasData = true;
         }
