@@ -7,13 +7,9 @@ services:
         IP2LOCATION_TOKEN: ${IP2LOCATION_TOKEN:-}
     image: code.paulg.it/paulgit/whatsmyip
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
 
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      # IP2Location LITE token (used only at build time for Docker;
-      # for local dev, run: npm run download-geodata)
-      IP2LOCATION_TOKEN: ${IP2LOCATION_TOKEN:-}
+    env_file:
+      - .env
 
     restart: unless-stopped
