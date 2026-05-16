@@ -530,9 +530,10 @@ body {
 /* ASN Display */
 .asn-display {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: center;
-    gap: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0;
     padding-top: 0.5rem;
     border-top: 1px solid var(--border-color);
     animation: fadeIn 0.5s ease 0.1s both;
@@ -544,8 +545,21 @@ body {
     font-weight: 600;
     color: var(--text-secondary);
     letter-spacing: 0.02em;
-    flex: 1;
-    min-width: 0;
+}
+
+.asn-name {
+    font-size: clamp(0.875rem, 2vw, 1.125rem);
+    font-weight: 400;
+    color: var(--text-tertiary);
+    margin-right: 0.5rem;
+}
+
+.cidr-value {
+    font-family: var(--font-mono);
+    font-size: clamp(0.875rem, 2vw, 1.125rem);
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
 }
 
 /* Click-to-Copy */
@@ -792,6 +806,15 @@ body {
     .asn-value {
         font-size: clamp(0.75rem, 3vw, 1rem);
     }
+
+    .asn-name {
+        font-size: clamp(0.75rem, 3vw, 1rem);
+    }
+
+    .cidr-value {
+        font-size: clamp(0.75rem, 3vw, 1rem);
+    }
+
 }
 
 @media (min-width: 1024px) {

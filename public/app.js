@@ -20,6 +20,8 @@
     ipLive: document.getElementById("ip-live"),
     asnDisplay: document.getElementById("asn-display"),
     asnValue: document.getElementById("asn-value"),
+    asnName: document.getElementById("asn-name"),
+    cidrValue: document.getElementById("cidr-value"),
     location: document.getElementById("location"),
     isp: document.getElementById("isp"),
     locationInfo: document.getElementById("location-info"),
@@ -47,6 +49,14 @@
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         handleCopyASN();
+      }
+    });
+
+    elements.cidrValue.addEventListener("click", handleCopyCIDR);
+    elements.cidrValue.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleCopyCIDR();
       }
     });
 
@@ -201,6 +211,13 @@
     // Display ASN information
     if (data.asn) {
       elements.asnValue.textContent = data.asn;
+      elements.asnName.textContent = data.asn_name ? ` ${data.asn_name}` : "";
+      if (data.cidr) {
+        elements.cidrValue.textContent = data.cidr;
+        elements.cidrValue.classList.remove("hidden");
+      } else {
+        elements.cidrValue.classList.add("hidden");
+      }
       elements.asnDisplay.classList.remove("hidden");
     } else {
       elements.asnDisplay.classList.add("hidden");
@@ -233,6 +250,15 @@
     const asn = elements.asnValue.textContent;
     if (!asn || asn === "--" || asn === "Unknown") return;
     await copyText(asn, elements.asnValue);
+  }
+
+  /**
+   * Copy CIDR range to clipboard
+   */
+  async function handleCopyCIDR() {
+    const cidr = elements.cidrValue.textContent;
+    if (!cidr) return;
+    await copyText(cidr, elements.cidrValue);
   }
 
   /**

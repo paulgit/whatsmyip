@@ -149,17 +149,38 @@ function getIPInfo(ip) {
     try {
       const city = cityDb.getAll(ip);
       if (city) {
-        if (isGeoField(city.city)) { result.city = city.city; hasData = true; }
-        if (isGeoField(city.region)) { result.region = city.region; hasData = true; }
-        if (isGeoField(city.countryShort)) { result.country = city.countryShort; hasData = true; }
-        if (isGeoField(city.countryLong)) { result.country_name = city.countryLong; hasData = true; }
-        if (isGeoField(city.zipCode)) { result.postal = city.zipCode; hasData = true; }
-        if (isGeoField(city.timeZone)) { result.timezone = city.timeZone; hasData = true; }
+        if (isGeoField(city.city)) {
+          result.city = city.city;
+          hasData = true;
+        }
+        if (isGeoField(city.region)) {
+          result.region = city.region;
+          hasData = true;
+        }
+        if (isGeoField(city.countryShort)) {
+          result.country = city.countryShort;
+          hasData = true;
+        }
+        if (isGeoField(city.countryLong)) {
+          result.country_name = city.countryLong;
+          hasData = true;
+        }
+        if (isGeoField(city.zipCode)) {
+          result.postal = city.zipCode;
+          hasData = true;
+        }
+        if (isGeoField(city.timeZone)) {
+          result.timezone = city.timeZone;
+          hasData = true;
+        }
         if (isGeoField(city.latitude) && isGeoField(city.longitude)) {
           result.loc = `${city.latitude},${city.longitude}`;
           hasData = true;
         }
-        if (isGeoField(city.isp)) { result.org = city.isp; hasData = true; }
+        if (isGeoField(city.isp)) {
+          result.org = city.isp;
+          hasData = true;
+        }
       }
     } catch (err) {
       console.error("City lookup error:", err.message);
@@ -172,10 +193,17 @@ function getIPInfo(ip) {
       if (asn) {
         if (isGeoField(asn.as)) {
           result.org = asn.as; // ASN org name preferred over city ISP; intentionally overwrites
+          // Extract ASN name by removing the leading "AS<number> " prefix
+          const asnNameMatch = asn.as.match(/^AS\d+\s+(.*)$/);
+          result.asn_name = asnNameMatch ? asnNameMatch[1] : asn.as;
           hasData = true;
         }
         if (isGeoField(asn.asn)) {
           result.asn = `AS${asn.asn}`;
+          hasData = true;
+        }
+        if (isGeoField(asn.asCidr)) {
+          result.cidr = asn.asCidr;
           hasData = true;
         }
       }
