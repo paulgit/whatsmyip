@@ -109,39 +109,26 @@
           <div class="ip-display">
             <label for="ip-address" class="ip-label">Your IP Address</label>
             <div class="ip-wrapper">
-              <span id="ip-address" class="ip-address" aria-live="polite"
-                >--.--.--.--</span
-              >
-              <button
-                id="copy-btn"
-                class="btn-copy"
-                aria-label="Copy IP address to clipboard"
-                title="Copy to clipboard"
-              >
-                <svg
-                  class="icon-copy"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path
-                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                  />
-                </svg>
-                <svg
-                  class="icon-check hidden"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </button>
+              <span
+                id="ip-address"
+                class="ip-address copyable"
+                role="button"
+                tabindex="0"
+                aria-live="polite"
+                aria-label="Your IP address — click to copy"
+                title="Click to copy"
+              >--.--.--.--</span>
+
+              <div id="asn-display" class="asn-display hidden">
+                <span
+                  id="asn-value"
+                  class="asn-value copyable"
+                  role="button"
+                  tabindex="0"
+                  aria-label="ASN — click to copy"
+                  title="Click to copy"
+                >--</span>
+              </div>
             </div>
           </div>
 
@@ -196,10 +183,10 @@
           <p>
             Geolocation data by
             <a
-              href="https://maxmind.com"
+              href="https://lite.ip2location.com"
               target="_blank"
               rel="noopener noreferrer"
-              >Maxmind</a
+              >IP2Location LITE</a
             >
           </p>
         </div>

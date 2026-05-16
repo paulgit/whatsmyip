@@ -493,8 +493,8 @@ body {
 
 .ip-wrapper {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    gap: 0.75rem;
     background-color: var(--bg-secondary);
     backdrop-filter: blur(12px) saturate(1.2);
     -webkit-backdrop-filter: blur(12px) saturate(1.2);
@@ -527,80 +527,66 @@ body {
     min-width: 0;
 }
 
-/* Copy Button */
-.btn-copy {
-    grid-area: copy;
-    align-self: start;
-    justify-self: end;
+/* ASN Display */
+.asn-display {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    background-color: color-mix(in srgb, var(--bg-tertiary) 70%, white 30%);
-    border: 1px solid
-        color-mix(in srgb, var(--border-color) 65%, var(--text-secondary) 35%);
-    color: var(--text-secondary);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition:
-        transform var(--transition-fast),
-        background-color var(--transition-fast),
-        border-color var(--transition-fast),
-        box-shadow var(--transition-fast),
-        color var(--transition-fast);
-    flex-shrink: 0;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    animation: fadeIn 0.5s ease 0.1s both;
 }
 
-.btn-copy:hover {
-    transform: scale(1.03);
-    background-color: color-mix(
-        in srgb,
-        var(--accent-light) 75%,
-        var(--bg-secondary) 25%
-    );
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 2px
-        color-mix(in srgb, var(--accent-primary) 20%, transparent);
+.asn-value {
+    font-family: var(--font-mono);
+    font-size: clamp(0.875rem, 2vw, 1.125rem);
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Click-to-Copy */
+.copyable {
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 0.2em 0.4em;
+    margin: -0.2em -0.4em;
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.copyable:hover {
+    background-color: var(--accent-light);
     color: var(--accent-primary);
 }
 
-.btn-copy:active {
-    transform: scale(0.96);
+.copyable:active {
+    transform: scale(0.97);
 }
 
-.btn-copy:focus-visible {
+.copyable:focus-visible {
     outline: 2px solid var(--accent-primary);
     outline-offset: 2px;
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 4px
-        color-mix(in srgb, var(--accent-primary) 28%, transparent);
 }
 
-.btn-copy svg {
-    width: 20px;
-    height: 20px;
-    transition: opacity var(--transition-fast);
-}
-
-.btn-copy.copied {
-    background-color: var(--success);
-    border-color: var(--success);
-    color: white;
+.copyable.copied {
+    background-color: color-mix(in srgb, var(--success) 15%, transparent);
+    color: var(--success);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .btn-copy {
+    .copyable {
         transition:
             background-color var(--transition-fast),
-            border-color var(--transition-fast),
-            box-shadow var(--transition-fast),
             color var(--transition-fast);
     }
 
-    .btn-copy:hover,
-    .btn-copy:active {
+    .copyable:active {
         transform: none;
     }
 }
@@ -794,8 +780,6 @@ body {
         width: 100%;
         max-width: 100%;
         padding: 1rem;
-        flex-direction: column;
-        gap: 0.75rem;
     }
 
     .ip-address {
@@ -805,17 +789,8 @@ body {
         overflow-wrap: anywhere;
     }
 
-    .btn-copy {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
-        min-height: 44px;
-        align-self: center;
-    }
-
-    .btn-copy svg {
-        width: 18px;
-        height: 18px;
+    .asn-value {
+        font-size: clamp(0.75rem, 3vw, 1rem);
     }
 }
 
@@ -834,7 +809,7 @@ body {
         color: black;
     }
 
-    .btn-copy,
+    .copyable,
     .footer,
     .loading,
     .error {
@@ -869,7 +844,7 @@ body {
         --border-color: currentColor;
     }
 
-    .btn-copy,
+    .copyable,
     .info-card,
     .ip-wrapper {
         border-width: 2px;

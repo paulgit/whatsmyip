@@ -1,7 +1,7 @@
 /**
  * What's My IP Server
  * Express-based service to display external IP addresses with geolocation
- * Uses MaxMind GeoLite2 databases for local, fast lookups
+ * Uses IP2Location LITE databases for local, fast lookups
  *
  * @author Paul Git <paulgit@pm.me>
  * @license MIT
@@ -9,8 +9,9 @@
 
 require("dotenv").config();
 const express = require("express");
+const fs = require("fs");
 const path = require("path");
-const maxmind = require("maxmind");
+const { IP2Location } = require("ip2location-nodejs");
 
 const FLAG_ICONS_PATH = path.join(__dirname, "node_modules", "flag-icons");
 const GEODATA_DIR = path.join(__dirname, "geodata");
@@ -18,32 +19,45 @@ const GEODATA_DIR = path.join(__dirname, "geodata");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let cityReader = null;
-let asnReader = null;
+let cityDb = null;
+let asnDb = null;
 
 /**
- * Initialise MaxMind GeoIP database readers
- * Loads GeoLite2-City and GeoLite2-ASN .mmdb files from the geodata directory
+ * Initialise IP2Location LITE database readers
+ * Loads IP2LOCATION-LITE-DB11.BIN and IP2LOCATION-LITE-ASN.BIN from the geodata directory
  */
 async function initGeoIP() {
-  const cityDbPath = path.join(GEODATA_DIR, "GeoLite2-City.mmdb");
-  const asnDbPath = path.join(GEODATA_DIR, "GeoLite2-ASN.mmdb");
+  const cityDbPath = path.join(GEODATA_DIR, "IP2LOCATION-LITE-DB11.BIN");
+  const asnDbPath = path.join(GEODATA_DIR, "IP2LOCATION-LITE-ASN.BIN");
 
-  try {
-    cityReader = await maxmind.open(cityDbPath);
-    console.log("GeoIP City database loaded");
-  } catch (err) {
-    console.warn("GeoLite2-City database not available:", err.message);
+  if (fs.existsSync(cityDbPath)) {
+    try {
+      cityDb = new IP2Location();
+      await cityDb.openAsync(cityDbPath);
+      console.log("IP2Location City database loaded");
+    } catch (err) {
+      console.warn("IP2Location City database not available:", err.message);
+      cityDb = null;
+    }
+  } else {
     console.warn(
-      "Geolocation data will be unavailable. Run 'npm run download-geodata' to fetch the database.",
+      "IP2Location City database not found at " +
+        cityDbPath +
+        ". Run 'npm run download-geodata' to fetch the database.",
     );
   }
 
-  try {
-    asnReader = await maxmind.open(asnDbPath);
-    console.log("GeoIP ASN database loaded");
-  } catch (err) {
-    console.warn("GeoLite2-ASN database not available:", err.message);
+  if (fs.existsSync(asnDbPath)) {
+    try {
+      asnDb = new IP2Location();
+      await asnDb.openAsync(asnDbPath);
+      console.log("IP2Location ASN database loaded");
+    } catch (err) {
+      console.warn("IP2Location ASN database not available:", err.message);
+      asnDb = null;
+    }
+  } else {
+    console.warn("IP2Location ASN database not found at " + asnDbPath);
   }
 }
 
@@ -116,43 +130,93 @@ function isValidPublicIP(ip) {
 }
 
 /**
- * Look up geolocation data from local MaxMind databases
+ * Look up geolocation data from local IP2Location databases
  * Synchronous lookup — typically completes in 1-5ms
  */
 function getIPInfo(ip) {
   const result = {};
   let hasData = false;
 
-  if (cityReader) {
+  if (cityDb) {
     try {
-      const city = cityReader.get(ip);
+      const city = cityDb.getAll(ip);
       if (city) {
-        if (city.city?.names?.en) {
-          result.city = city.city.names.en;
+        if (
+          city.city &&
+          city.city !== "MISSING_FILE" &&
+          city.city !== "-" &&
+          city.city !== "N/A"
+        ) {
+          result.city = city.city;
           hasData = true;
         }
-        if (city.subdivisions?.[0]?.names?.en) {
-          result.region = city.subdivisions[0].names.en;
+        if (
+          city.region &&
+          city.region !== "MISSING_FILE" &&
+          city.region !== "-" &&
+          city.region !== "N/A"
+        ) {
+          result.region = city.region;
           hasData = true;
         }
-        if (city.country?.iso_code) {
-          result.country = city.country.iso_code;
+        if (
+          city.countryShort &&
+          city.countryShort !== "MISSING_FILE" &&
+          city.countryShort !== "-" &&
+          city.countryShort !== "N/A"
+        ) {
+          result.country = city.countryShort;
           hasData = true;
         }
-        if (city.country?.names?.en) {
-          result.country_name = city.country.names.en;
+        if (
+          city.countryLong &&
+          city.countryLong !== "MISSING_FILE" &&
+          city.countryLong !== "-" &&
+          city.countryLong !== "N/A"
+        ) {
+          result.country_name = city.countryLong;
           hasData = true;
         }
-        if (city.postal?.code) {
-          result.postal = city.postal.code;
+        if (
+          city.zipCode &&
+          city.zipCode !== "MISSING_FILE" &&
+          city.zipCode !== "-" &&
+          city.zipCode !== "N/A"
+        ) {
+          result.postal = city.zipCode;
           hasData = true;
         }
-        if (city.location?.time_zone) {
-          result.timezone = city.location.time_zone;
+        if (
+          city.timeZone &&
+          city.timeZone !== "MISSING_FILE" &&
+          city.timeZone !== "-" &&
+          city.timeZone !== "N/A"
+        ) {
+          result.timezone = city.timeZone;
           hasData = true;
         }
-        if (city.location?.latitude && city.location?.longitude) {
-          result.loc = `${city.location.latitude},${city.location.longitude}`;
+        if (
+          city.latitude &&
+          city.latitude !== "" &&
+          city.latitude !== "MISSING_FILE" &&
+          city.latitude !== "-" &&
+          city.latitude !== "N/A" &&
+          city.longitude &&
+          city.longitude !== "" &&
+          city.longitude !== "MISSING_FILE" &&
+          city.longitude !== "-" &&
+          city.longitude !== "N/A"
+        ) {
+          result.loc = `${city.latitude},${city.longitude}`;
+          hasData = true;
+        }
+        if (
+          city.isp &&
+          city.isp !== "MISSING_FILE" &&
+          city.isp !== "-" &&
+          city.isp !== "N/A"
+        ) {
+          result.org = city.isp;
           hasData = true;
         }
       }
@@ -161,16 +225,26 @@ function getIPInfo(ip) {
     }
   }
 
-  if (asnReader) {
+  if (asnDb) {
     try {
-      const asn = asnReader.get(ip);
+      const asn = asnDb.getAll(ip);
       if (asn) {
-        if (asn.autonomous_system_organization) {
-          result.org = asn.autonomous_system_organization;
+        if (
+          asn.as &&
+          asn.as !== "MISSING_FILE" &&
+          asn.as !== "-" &&
+          asn.as !== "N/A"
+        ) {
+          result.org = asn.as;
           hasData = true;
         }
-        if (asn.autonomous_system_number) {
-          result.asn = `AS${asn.autonomous_system_number}`;
+        if (
+          asn.asn &&
+          asn.asn !== "MISSING_FILE" &&
+          asn.asn !== "-" &&
+          asn.asn !== "N/A"
+        ) {
+          result.asn = `AS${asn.asn}`;
           hasData = true;
         }
       }
@@ -250,8 +324,8 @@ app.get("/health", (req, res) => {
     status: "ok",
     timestamp: new Date().toISOString(),
     geoip: {
-      city: cityReader ? "loaded" : "unavailable",
-      asn: asnReader ? "loaded" : "unavailable",
+      city: cityDb ? "loaded" : "unavailable",
+      asn: asnDb ? "loaded" : "unavailable",
     },
   });
 });
@@ -272,7 +346,7 @@ initGeoIP().then(() => {
   app.listen(PORT, () => {
     console.log(`What's My IP server running on http://localhost:${PORT}`);
     console.log(
-      `GeoIP: City ${cityReader ? "loaded" : "unavailable"}, ASN ${asnReader ? "loaded" : "unavailable"}`,
+      `GeoIP: City ${cityDb ? "loaded" : "unavailable"}, ASN ${asnDb ? "loaded" : "unavailable"}`,
     );
   });
 });
