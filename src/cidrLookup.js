@@ -86,8 +86,16 @@ function rangeToCidr(ipFromStr, ipToStr, ipType) {
   // Fallback: manual CIDR calculation for IPv4
   if (ipType === 4) {
     try {
-      const from = BigInt(ipFromStr.split(".").reduce((acc, octet) => (acc << 8n) + BigInt(octet), 0n));
-      const to = BigInt(ipToStr.split(".").reduce((acc, octet) => (acc << 8n) + BigInt(octet), 0n));
+      const from = BigInt(
+        ipFromStr
+          .split(".")
+          .reduce((acc, octet) => (acc << 8n) + BigInt(octet), 0n),
+      );
+      const to = BigInt(
+        ipToStr
+          .split(".")
+          .reduce((acc, octet) => (acc << 8n) + BigInt(octet), 0n),
+      );
       const xor = from ^ to;
 
       if (xor === 0n) {
@@ -119,7 +127,9 @@ function rangeToCidr(ipFromStr, ipToStr, ipType) {
 function dot2Num(ip) {
   const parts = ip.split(".");
   if (parts.length !== 4) return 0;
-  return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
+  return (
+    ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0
+  );
 }
 
 /**
@@ -185,9 +195,11 @@ function lookupCidr(ip) {
   }
 
   try {
-    // Read the database header (64 bytes, starting at byte 1)
+    // Read the database header (64 bytes at file position 0).
+    // The IP2Location BIN format uses 1-based positions internally,
+    // but fs.readSync uses 0-based offsets. The header starts at byte 0.
     const headerBuf = Buffer.alloc(64);
-    fs.readSync(fd, headerBuf, 0, 64, 1);
+    fs.readSync(fd, headerBuf, 0, 64, 0);
 
     const dbColumn = headerBuf.readUInt8(1);
     const dbCount = headerBuf.readUInt32LE(5);
@@ -233,9 +245,17 @@ function lookupCidr(ip) {
       const mid = Math.trunc((low + high) / 2);
       const rowOffset = searchBase + mid * columnSize;
 
-      // Read ipFrom + whole row + next ipFrom
+      // Read ipFrom + whole row + next ipFrom.
+      // baseAddress and derived offsets are 1-based per the IP2Location BIN format,
+      // so subtract 1 to convert to the 0-based offset fs.readSync expects.
       const rowBuf = Buffer.alloc(columnSize + firstCol);
-      const bytesRead = fs.readSync(fd, rowBuf, 0, columnSize + firstCol, rowOffset);
+      const bytesRead = fs.readSync(
+        fd,
+        rowBuf,
+        0,
+        columnSize + firstCol,
+        rowOffset - 1,
+      );
       if (bytesRead < columnSize + firstCol) break;
 
       const fromVal = read32Or128Row(0, rowBuf, firstCol);
@@ -255,11 +275,13 @@ function lookupCidr(ip) {
     if (foundIpFrom === null) return null;
 
     // Convert ipFrom and ipTo to IP strings
-    const ipFromStr = ipType === 4 ? bigIntToIPv4(foundIpFrom) : bigIntToIPv6(foundIpFrom);
+    const ipFromStr =
+      ipType === 4 ? bigIntToIPv4(foundIpFrom) : bigIntToIPv6(foundIpFrom);
 
     // ipTo is the start of the next record; the actual end of the range is ipTo - 1
     const ipToEnd = foundIpTo - BigInt(1);
-    const ipToStr = ipType === 4 ? bigIntToIPv4(ipToEnd) : bigIntToIPv6(ipToEnd);
+    const ipToStr =
+      ipType === 4 ? bigIntToIPv4(ipToEnd) : bigIntToIPv6(ipToEnd);
 
     // Convert the IP range to CIDR notation
     return rangeToCidr(ipFromStr, ipToStr, ipType);

@@ -179,10 +179,6 @@ function getIPInfo(ip) {
           result.loc = `${city.latitude},${city.longitude}`;
           hasData = true;
         }
-        if (isGeoField(city.isp)) {
-          result.org = city.isp;
-          hasData = true;
-        }
       }
     } catch (err) {
       console.error("City lookup error:", err.message);
@@ -194,7 +190,6 @@ function getIPInfo(ip) {
       const asn = asnDb.getAll(ip);
       if (asn) {
         if (isGeoField(asn.as)) {
-          result.org = asn.as; // ASN org name preferred over city ISP; intentionally overwrites
           // Extract ASN name by removing the leading "AS<number> " prefix
           const asnNameMatch = asn.as.match(/^AS\d+\s+(.*)$/);
           result.asn_name = asnNameMatch ? asnNameMatch[1] : asn.as;

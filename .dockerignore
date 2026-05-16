@@ -53,8 +53,10 @@ yarn-error.log*
 .gitlab-ci.yml
 .travis.yml
 
-# IP2Location LITE databases (downloaded during build)
-geodata/
+# IP2Location LITE databases
+# Local copies are used if present; otherwise downloaded during build
+# Only ignore the .no-data marker file
+geodata/.no-data
 
 # Local deployment/runtime files not needed for image build
 vercel.json
