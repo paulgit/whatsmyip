@@ -12,6 +12,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const { IP2Location } = require("ip2location-nodejs");
+const { initCidrLookup, lookupCidr } = require("./src/cidrLookup");
 
 const FLAG_ICONS_PATH = path.join(__dirname, "node_modules", "flag-icons");
 const GEODATA_DIR = path.join(__dirname, "geodata");
@@ -52,6 +53,7 @@ async function initGeoIP() {
       asnDb = new IP2Location();
       await asnDb.openAsync(asnDbPath);
       console.log("IP2Location ASN database loaded");
+      initCidrLookup(asnDbPath);
     } catch (err) {
       console.warn("IP2Location ASN database not available:", err.message);
       asnDb = null;
@@ -205,6 +207,15 @@ function getIPInfo(ip) {
         if (isGeoField(asn.asCidr)) {
           result.cidr = asn.asCidr;
           hasData = true;
+        } else {
+          // Fallback: compute CIDR from the database IP range
+          // (the LITE BIN file returns "-" for asCidr even though CIDR
+          // data exists in the CSV format, so we read ipFrom/ipTo directly)
+          const cidr = lookupCidr(ip);
+          if (cidr) {
+            result.cidr = cidr;
+            hasData = true;
+          }
         }
       }
     } catch (err) {
