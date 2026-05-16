@@ -17,7 +17,9 @@
     retryBtn: document.getElementById("retry-btn"),
     mainContent: document.getElementById("main-content"),
     ipAddress: document.getElementById("ip-address"),
-    copyBtn: document.getElementById("copy-btn"),
+    ipLive: document.getElementById("ip-live"),
+    asnDisplay: document.getElementById("asn-display"),
+    asnValue: document.getElementById("asn-value"),
     location: document.getElementById("location"),
     isp: document.getElementById("isp"),
     locationInfo: document.getElementById("location-info"),
@@ -32,7 +34,22 @@
    */
   function init() {
     // Set up event listeners
-    elements.copyBtn.addEventListener("click", handleCopy);
+    elements.ipAddress.addEventListener("click", handleCopyIP);
+    elements.ipAddress.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleCopyIP();
+      }
+    });
+
+    elements.asnValue.addEventListener("click", handleCopyASN);
+    elements.asnValue.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleCopyASN();
+      }
+    });
+
     elements.retryBtn.addEventListener("click", handleRetry);
 
     // Theme toggle
@@ -60,7 +77,7 @@
    * Two-phase fetch: get IP immediately, then load geolocation data
    *
    * Phase 1: /api/ip — instant, no database lookup needed
-   * Phase 2: /api/info — local MaxMind lookup (~1-5ms), fills in location/ISP/flag
+   * Phase 2: /api/info — local IP2Location lookup (~1-5ms), fills in location/ISP/flag
    */
   async function fetchIPInfo() {
     showLoading();
@@ -74,6 +91,7 @@
       const ipData = await ipPromise;
       currentIP = ipData.ip || "--";
       elements.ipAddress.textContent = currentIP;
+      elements.ipLive.textContent = currentIP;
 
       // Show main content with IP; location shows shimmer placeholders
       showMainContent();
@@ -180,6 +198,14 @@
       elements.isp.textContent = "Unknown";
     }
 
+    // Display ASN information
+    if (data.asn) {
+      elements.asnValue.textContent = data.asn;
+      elements.asnDisplay.classList.remove("hidden");
+    } else {
+      elements.asnDisplay.classList.add("hidden");
+    }
+
     // Remove shimmer placeholders once data is loaded
     elements.location.classList.remove("info-value--loading");
     elements.isp.classList.remove("info-value--loading");
@@ -196,30 +222,17 @@
   /**
    * Copy IP address to clipboard
    */
-  async function handleCopy() {
-    if (!currentIP) return;
+  async function handleCopyIP() {
+    await copyText(currentIP, elements.ipAddress);
+  }
 
-    try {
-      // Modern Clipboard API
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(currentIP);
-      } else {
-        // Fallback for older browsers
-        fallbackCopyToClipboard(currentIP);
-      }
-
-      showCopySuccess();
-    } catch (error) {
-      console.error("Failed to copy:", error);
-      // Try fallback method
-      try {
-        fallbackCopyToClipboard(currentIP);
-        showCopySuccess();
-      } catch (fallbackError) {
-        console.error("Fallback copy failed:", fallbackError);
-        alert("Failed to copy to clipboard. Please copy manually.");
-      }
-    }
+  /**
+   * Copy ASN to clipboard
+   */
+  async function handleCopyASN() {
+    const asn = elements.asnValue.textContent;
+    if (!asn || asn === "--" || asn === "Unknown") return;
+    await copyText(asn, elements.asnValue);
   }
 
   /**
@@ -244,27 +257,45 @@
   }
 
   /**
-   * Show copy success feedback
+   * Copy text to clipboard and show feedback on the element
+   * @param {string} text - Text to copy
+   * @param {HTMLElement} element - Element to show feedback on
    */
-  function showCopySuccess() {
-    const iconCopy = elements.copyBtn.querySelector(".icon-copy");
-    const iconCheck = elements.copyBtn.querySelector(".icon-check");
+  async function copyText(text, element) {
+    if (!text) return;
 
-    // Add copied state
-    elements.copyBtn.classList.add("copied");
-    iconCopy.classList.add("hidden");
-    iconCheck.classList.remove("hidden");
-    elements.copyBtn.setAttribute("aria-label", "Copied!");
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        fallbackCopyToClipboard(text);
+      }
+      showCopySuccess(element);
+    } catch (error) {
+      console.error("Failed to copy:", error);
+      try {
+        fallbackCopyToClipboard(text);
+        showCopySuccess(element);
+      } catch (fallbackError) {
+        console.error("Fallback copy failed:", fallbackError);
+        alert("Failed to copy to clipboard. Please copy manually.");
+      }
+    }
+  }
 
-    // Reset after 2 seconds
+  /**
+   * Show copy success feedback on an element
+   * @param {HTMLElement} element
+   */
+  function showCopySuccess(element) {
+    const originalTitle = element.getAttribute("title");
+
+    element.classList.add("copied");
+    element.setAttribute("title", "Copied!");
+
     setTimeout(() => {
-      elements.copyBtn.classList.remove("copied");
-      iconCopy.classList.remove("hidden");
-      iconCheck.classList.add("hidden");
-      elements.copyBtn.setAttribute(
-        "aria-label",
-        "Copy IP address to clipboard",
-      );
+      element.classList.remove("copied");
+      element.setAttribute("title", "Click to copy");
     }, 2000);
   }
 
@@ -296,6 +327,7 @@
     elements.error.classList.remove("hidden");
     elements.loading.classList.add("hidden");
     elements.mainContent.classList.add("hidden");
+    elements.asnDisplay.classList.add("hidden");
   }
 
   /**
@@ -305,6 +337,8 @@
     elements.mainContent.classList.remove("hidden");
     elements.loading.classList.add("hidden");
     elements.error.classList.add("hidden");
+    // Keep ASN hidden until geo data confirms it exists
+    elements.asnDisplay.classList.add("hidden");
   }
 
   // Start the application when DOM is ready

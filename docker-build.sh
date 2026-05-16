@@ -163,8 +163,7 @@ SCAN_PLATFORM="${TARGET_PLATFORM%%,*}"
 
 LABEL_ARGS=(
   --build-arg "ENV_APP_VERSION=${APP_VERSION}"
-  --build-arg "MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY:-}"
-  --build-arg "MAXMIND_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID:-}"
+  --build-arg "IP2LOCATION_TOKEN=${IP2LOCATION_TOKEN:-}"
   --label "org.opencontainers.image.revision=${GIT_SHA}"
   --label "org.opencontainers.image.source=https://${IMAGE_REGISTRY}"
   --label "org.opencontainers.image.title=whatsmyip"

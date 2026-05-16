@@ -7,36 +7,18 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Install curl for downloading MaxMind databases
-RUN apk add --no-cache curl
+# Install curl, unzip, and bash for downloading IP2Location databases
+RUN apk add --no-cache curl unzip bash
 
-# Download MaxMind GeoLite2 databases
-ARG MAXMIND_LICENSE_KEY
-ARG MAXMIND_ACCOUNT_ID
+# Download IP2Location LITE databases
+ARG IP2LOCATION_TOKEN
+COPY scripts/download-geodata.sh ./scripts/download-geodata.sh
 
 RUN mkdir -p /app/geodata && \
-    if [ -n "$MAXMIND_LICENSE_KEY" ]; then \
-        QUERY="license_key=${MAXMIND_LICENSE_KEY}&suffix=tar.gz"; \
-        if [ -n "$MAXMIND_ACCOUNT_ID" ]; then \
-            QUERY="account_id=${MAXMIND_ACCOUNT_ID}&${QUERY}"; \
-        fi; \
-        BASE_URL="https://download.maxmind.com/app/geoip_download"; \
-        echo "Downloading GeoLite2-City..."; \
-        mkdir -p /tmp/mmdb-city && \
-        curl -Ls --fail -o /tmp/city.tar.gz "${BASE_URL}?edition_id=GeoLite2-City&${QUERY}" && \
-        tar -xzf /tmp/city.tar.gz --strip-components=1 -C /tmp/mmdb-city && \
-        rm /tmp/city.tar.gz && \
-        mv /tmp/mmdb-city/GeoLite2-City.mmdb /app/geodata/ && \
-        rm -rf /tmp/mmdb-city && \
-        echo "Downloading GeoLite2-ASN..."; \
-        mkdir -p /tmp/mmdb-asn && \
-        curl -Ls --fail -o /tmp/asn.tar.gz "${BASE_URL}?edition_id=GeoLite2-ASN&${QUERY}" && \
-        tar -xzf /tmp/asn.tar.gz --strip-components=1 -C /tmp/mmdb-asn && \
-        rm /tmp/asn.tar.gz && \
-        mv /tmp/mmdb-asn/GeoLite2-ASN.mmdb /app/geodata/ && \
-        rm -rf /tmp/mmdb-asn; \
+    if [ -n "$IP2LOCATION_TOKEN" ]; then \
+        /app/scripts/download-geodata.sh; \
     else \
-        echo "WARNING: MAXMIND_LICENSE_KEY not provided. Geolocation will be unavailable."; \
+        echo "WARNING: IP2LOCATION_TOKEN not provided. Geolocation will be unavailable."; \
         touch /app/geodata/.no-data; \
     fi
 

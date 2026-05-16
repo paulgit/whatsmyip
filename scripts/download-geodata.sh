@@ -1,78 +1,83 @@
 #!/usr/bin/env bash
-# Download MaxMind GeoLite2 databases for local development
+# Download IP2Location LITE databases for local development
 #
-# Requires MAXMIND_LICENSE_KEY (and optionally MAXMIND_ACCOUNT_ID)
-# Get your free license key at: https://www.maxmind.com/en/geolite2/signup
+# Requires IP2LOCATION_TOKEN
+# Get your free download token at: https://lite.ip2location.com
 #
 # Usage:
-#   MAXMIND_LICENSE_KEY=your_key ./scripts/download-geodata.sh
-#   npm run download-geodata   (if MAXMIND_LICENSE_KEY is set in .env)
+#   IP2LOCATION_TOKEN=your_token ./scripts/download-geodata.sh
+#   npm run download-geodata   (if IP2LOCATION_TOKEN is set in .env)
 #
 set -euo pipefail
 
 GEODATA_DIR="$(cd "$(dirname "$0")/.." && pwd)/geodata"
-CITY_EDITION="GeoLite2-City"
-ASN_EDITION="GeoLite2-ASN"
+CITY_FILE="IP2LOCATION-LITE-DB11.BIN"
+ASN_FILE="IP2LOCATION-LITE-ASN.BIN"
+CITY_CODE="DB11LITEBINIPV6"
+ASN_CODE="DBASNLITEBINIPV6"
 
-LICENSE_KEY="${MAXMIND_LICENSE_KEY:-}"
-ACCOUNT_ID="${MAXMIND_ACCOUNT_ID:-}"
+TOKEN="${IP2LOCATION_TOKEN:-}"
 
-if [ -z "$LICENSE_KEY" ]; then
+if [ -z "$TOKEN" ]; then
     # Try loading from .env if it exists
     ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env"
     if [ -f "$ENV_FILE" ]; then
-        LICENSE_KEY="$(grep -E '^MAXMIND_LICENSE_KEY=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")"
-        ACCOUNT_ID="$(grep -E '^MAXMIND_ACCOUNT_ID=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")"
+        TOKEN="$(grep -E '^IP2LOCATION_TOKEN=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")"
     fi
 fi
 
-if [ -z "$LICENSE_KEY" ]; then
-    echo "Error: MAXMIND_LICENSE_KEY is required."
+if [ -z "$TOKEN" ]; then
+    echo "Error: IP2LOCATION_TOKEN is required."
     echo "Set it as an environment variable or in .env"
-    echo "Get your free license key at: https://www.maxmind.com/en/geolite2/signup"
+    echo "Get your free token at: https://lite.ip2location.com"
     exit 1
 fi
 
-# Build query parameters
-QUERY_PARAMS="license_key=${LICENSE_KEY}"
-if [ -n "$ACCOUNT_ID" ]; then
-    QUERY_PARAMS="account_id=${ACCOUNT_ID}&${QUERY_PARAMS}"
-fi
-
-BASE_URL="https://download.maxmind.com/app/geoip_download"
+BASE_URL="https://www.ip2location.com/download"
 
 echo "Creating geodata directory: ${GEODATA_DIR}"
 mkdir -p "$GEODATA_DIR"
 
-download_and_extract() {
-    local edition="$1"
-    local output_file="${GEODATA_DIR}/${edition}.mmdb"
-    local tmp_dir
-    tmp_dir="$(mktemp -d)"
+download_db() {
+    local file_code="$1"
+    local output_name="$2"
+    local tmp_file
+    tmp_file="$(mktemp)"
 
-    echo "Downloading ${edition}..."
+    echo "Downloading ${file_code}..."
 
-    local url="${BASE_URL}?edition_id=${edition}&${QUERY_PARAMS}&suffix=tar.gz"
+    local url="${BASE_URL}/?token=${TOKEN}&file=${file_code}"
 
-    # Download and extract the .mmdb file from the tar.gz
-    # --strip-components=1 removes the date-prefixed directory from the archive
-    curl -Ls --fail "$url" | tar -xz --strip-components=1 -C "$tmp_dir"
+    # Download to temp file
+    curl -Ls --fail -o "$tmp_file" "$url"
 
-    if [ ! -f "${tmp_dir}/${edition}.mmdb" ]; then
-        echo "Error: Failed to extract ${edition}.mmdb from archive."
-        rm -rf "$tmp_dir"
-        exit 1
+    # Check if it's a ZIP archive and extract if so
+    if unzip -q "$tmp_file" -d "${tmp_file}.d" 2>/dev/null; then
+        # Find the .BIN file inside the extracted directory
+        local bin_file
+        bin_file="$(find "${tmp_file}.d" -maxdepth 2 -name '*.BIN' -print -quit 2>/dev/null || true)"
+        if [ -n "$bin_file" ] && [ -f "$bin_file" ]; then
+            mv "$bin_file" "${GEODATA_DIR}/${output_name}"
+        else
+            echo "Error: Could not find .BIN file inside ${file_code} archive."
+            rm -rf "${tmp_file}.d"
+            rm -f "$tmp_file"
+            exit 1
+        fi
+        rm -rf "${tmp_file}.d"
+    else
+        # Not a ZIP — assume it's the raw .BIN file
+        mv "$tmp_file" "${GEODATA_DIR}/${output_name}"
     fi
 
-    mv "${tmp_dir}/${edition}.mmdb" "$output_file"
-    rm -rf "$tmp_dir"
+    rm -f "$tmp_file"
     local size
-    size="$(du -h "$output_file" | cut -f1 | tr -d ' ')"
-    echo "  ${edition}.mmdb saved (${size})"
+    size="$(du -h "${GEODATA_DIR}/${output_name}" | cut -f1 | tr -d ' ')"
+    echo "  ${output_name} saved (${size})"
 }
 
-download_and_extract "$CITY_EDITION"
-download_and_extract "$ASN_EDITION"
+download_db "$CITY_CODE" "$CITY_FILE"
+download_db "$ASN_CODE" "$ASN_FILE"
 
 echo ""
-echo "Done! GeoLite2 databases saved to: ${GEODATA_DIR}/"
+echo "Done! IP2Location LITE databases saved to: ${GEODATA_DIR}/"

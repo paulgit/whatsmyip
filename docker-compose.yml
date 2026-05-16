@@ -4,8 +4,7 @@ services:
     build:
       context: .
       args:
-        MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
-        MAXMIND_ACCOUNT_ID: ${MAXMIND_ACCOUNT_ID:-}
+        IP2LOCATION_TOKEN: ${IP2LOCATION_TOKEN:-}
     image: code.paulg.it/paulgit/whatsmyip
     ports:
       - "3000:3000"
@@ -13,9 +12,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      # MaxMind GeoLite2 credentials (used only at build time for Docker;
+      # IP2Location LITE token (used only at build time for Docker;
       # for local dev, run: npm run download-geodata)
-      MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
-      MAXMIND_ACCOUNT_ID: ${MAXMIND_ACCOUNT_ID:-}
+      IP2LOCATION_TOKEN: ${IP2LOCATION_TOKEN:-}
 
     restart: unless-stopped

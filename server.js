@@ -1,7 +1,7 @@
 /**
  * What's My IP Server
  * Express-based service to display external IP addresses with geolocation
- * Uses MaxMind GeoLite2 databases for local, fast lookups
+ * Uses IP2Location LITE databases for local, fast lookups
  *
  * @author Paul Git <paulgit@pm.me>
  * @license MIT
@@ -9,8 +9,9 @@
 
 require("dotenv").config();
 const express = require("express");
+const fs = require("fs");
 const path = require("path");
-const maxmind = require("maxmind");
+const { IP2Location } = require("ip2location-nodejs");
 
 const FLAG_ICONS_PATH = path.join(__dirname, "node_modules", "flag-icons");
 const GEODATA_DIR = path.join(__dirname, "geodata");
@@ -18,32 +19,45 @@ const GEODATA_DIR = path.join(__dirname, "geodata");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let cityReader = null;
-let asnReader = null;
+let cityDb = null;
+let asnDb = null;
 
 /**
- * Initialise MaxMind GeoIP database readers
- * Loads GeoLite2-City and GeoLite2-ASN .mmdb files from the geodata directory
+ * Initialise IP2Location LITE database readers
+ * Loads IP2LOCATION-LITE-DB11.BIN and IP2LOCATION-LITE-ASN.BIN from the geodata directory
  */
 async function initGeoIP() {
-  const cityDbPath = path.join(GEODATA_DIR, "GeoLite2-City.mmdb");
-  const asnDbPath = path.join(GEODATA_DIR, "GeoLite2-ASN.mmdb");
+  const cityDbPath = path.join(GEODATA_DIR, "IP2LOCATION-LITE-DB11.BIN");
+  const asnDbPath = path.join(GEODATA_DIR, "IP2LOCATION-LITE-ASN.BIN");
 
-  try {
-    cityReader = await maxmind.open(cityDbPath);
-    console.log("GeoIP City database loaded");
-  } catch (err) {
-    console.warn("GeoLite2-City database not available:", err.message);
+  if (fs.existsSync(cityDbPath)) {
+    try {
+      cityDb = new IP2Location();
+      await cityDb.openAsync(cityDbPath);
+      console.log("IP2Location City database loaded");
+    } catch (err) {
+      console.warn("IP2Location City database not available:", err.message);
+      cityDb = null;
+    }
+  } else {
     console.warn(
-      "Geolocation data will be unavailable. Run 'npm run download-geodata' to fetch the database.",
+      "IP2Location City database not found at " +
+        cityDbPath +
+        ". Run 'npm run download-geodata' to fetch the database.",
     );
   }
 
-  try {
-    asnReader = await maxmind.open(asnDbPath);
-    console.log("GeoIP ASN database loaded");
-  } catch (err) {
-    console.warn("GeoLite2-ASN database not available:", err.message);
+  if (fs.existsSync(asnDbPath)) {
+    try {
+      asnDb = new IP2Location();
+      await asnDb.openAsync(asnDbPath);
+      console.log("IP2Location ASN database loaded");
+    } catch (err) {
+      console.warn("IP2Location ASN database not available:", err.message);
+      asnDb = null;
+    }
+  } else {
+    console.warn("IP2Location ASN database not found at " + asnDbPath);
   }
 }
 
@@ -116,61 +130,52 @@ function isValidPublicIP(ip) {
 }
 
 /**
- * Look up geolocation data from local MaxMind databases
+ * Return true when a field from IP2Location contains a real value.
+ * The library returns sentinel strings for missing data depending on the DB tier.
+ */
+function isGeoField(val) {
+  return val && val !== "MISSING_FILE" && val !== "-" && val !== "N/A";
+}
+
+/**
+ * Look up geolocation data from local IP2Location databases
  * Synchronous lookup — typically completes in 1-5ms
  */
 function getIPInfo(ip) {
   const result = {};
   let hasData = false;
 
-  if (cityReader) {
+  if (cityDb) {
     try {
-      const city = cityReader.get(ip);
+      const city = cityDb.getAll(ip);
       if (city) {
-        if (city.city?.names?.en) {
-          result.city = city.city.names.en;
+        if (isGeoField(city.city)) { result.city = city.city; hasData = true; }
+        if (isGeoField(city.region)) { result.region = city.region; hasData = true; }
+        if (isGeoField(city.countryShort)) { result.country = city.countryShort; hasData = true; }
+        if (isGeoField(city.countryLong)) { result.country_name = city.countryLong; hasData = true; }
+        if (isGeoField(city.zipCode)) { result.postal = city.zipCode; hasData = true; }
+        if (isGeoField(city.timeZone)) { result.timezone = city.timeZone; hasData = true; }
+        if (isGeoField(city.latitude) && isGeoField(city.longitude)) {
+          result.loc = `${city.latitude},${city.longitude}`;
           hasData = true;
         }
-        if (city.subdivisions?.[0]?.names?.en) {
-          result.region = city.subdivisions[0].names.en;
-          hasData = true;
-        }
-        if (city.country?.iso_code) {
-          result.country = city.country.iso_code;
-          hasData = true;
-        }
-        if (city.country?.names?.en) {
-          result.country_name = city.country.names.en;
-          hasData = true;
-        }
-        if (city.postal?.code) {
-          result.postal = city.postal.code;
-          hasData = true;
-        }
-        if (city.location?.time_zone) {
-          result.timezone = city.location.time_zone;
-          hasData = true;
-        }
-        if (city.location?.latitude && city.location?.longitude) {
-          result.loc = `${city.location.latitude},${city.location.longitude}`;
-          hasData = true;
-        }
+        if (isGeoField(city.isp)) { result.org = city.isp; hasData = true; }
       }
     } catch (err) {
       console.error("City lookup error:", err.message);
     }
   }
 
-  if (asnReader) {
+  if (asnDb) {
     try {
-      const asn = asnReader.get(ip);
+      const asn = asnDb.getAll(ip);
       if (asn) {
-        if (asn.autonomous_system_organization) {
-          result.org = asn.autonomous_system_organization;
+        if (isGeoField(asn.as)) {
+          result.org = asn.as; // ASN org name preferred over city ISP; intentionally overwrites
           hasData = true;
         }
-        if (asn.autonomous_system_number) {
-          result.asn = `AS${asn.autonomous_system_number}`;
+        if (isGeoField(asn.asn)) {
+          result.asn = `AS${asn.asn}`;
           hasData = true;
         }
       }
@@ -250,8 +255,8 @@ app.get("/health", (req, res) => {
     status: "ok",
     timestamp: new Date().toISOString(),
     geoip: {
-      city: cityReader ? "loaded" : "unavailable",
-      asn: asnReader ? "loaded" : "unavailable",
+      city: cityDb ? "loaded" : "unavailable",
+      asn: asnDb ? "loaded" : "unavailable",
     },
   });
 });
@@ -272,7 +277,7 @@ initGeoIP().then(() => {
   app.listen(PORT, () => {
     console.log(`What's My IP server running on http://localhost:${PORT}`);
     console.log(
-      `GeoIP: City ${cityReader ? "loaded" : "unavailable"}, ASN ${asnReader ? "loaded" : "unavailable"}`,
+      `GeoIP: City ${cityDb ? "loaded" : "unavailable"}, ASN ${asnDb ? "loaded" : "unavailable"}`,
     );
   });
 });
