@@ -10,11 +10,11 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Install curl, unzip, and bash for downloading IP2Location databases (if needed)
 RUN apk add --no-cache curl unzip bash
 
-# Copy local geodata if present (avoids rate-limited downloads on rebuild)
-COPY geodata/ /app/geodata/
-
 # Download IP2Location LITE databases only if not already present
 ARG IP2LOCATION_TOKEN
+
+# Copy local geodata if present (avoids rate-limited downloads on rebuild)
+COPY geodata/ /app/geodata/
 COPY scripts/download-geodata.sh ./scripts/download-geodata.sh
 
 RUN mkdir -p /app/geodata && \

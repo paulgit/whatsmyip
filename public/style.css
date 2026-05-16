@@ -670,13 +670,6 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
-/* Info Grid */
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--spacing-lg);
-}
-
 .info-item {
   display: flex;
   align-items: flex-start;
@@ -815,9 +808,6 @@ body {
     padding: var(--spacing-lg);
   }
 
-  .info-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 @media (min-width: 768px) {

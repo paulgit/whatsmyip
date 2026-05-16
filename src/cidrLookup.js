@@ -139,6 +139,13 @@ function dot2Num(ip) {
  */
 function ip2No(ip) {
   let fullIp = ip;
+
+  // Handle IPv4-mapped IPv6 addresses like ::ffff:192.0.2.1
+  const ipv4MappedMatch = fullIp.match(/^(?:0*:)*:(?:0*:)*ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (ipv4MappedMatch) {
+    return BigInt(0xffffn << 32n) | BigInt(dot2Num(ipv4MappedMatch[1]));
+  }
+
   if (fullIp.includes("::")) {
     const halves = fullIp.split("::");
     const left = halves[0] ? halves[0].split(":") : [];
