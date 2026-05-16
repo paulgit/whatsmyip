@@ -65,22 +65,7 @@
             <div class="skeleton skeleton-label"></div>
             <div class="skeleton skeleton-ip"></div>
           </div>
-          <div class="skeleton-card">
-            <div class="skeleton-info-item">
-              <div class="skeleton skeleton-icon"></div>
-              <div class="skeleton-text-group">
-                <div class="skeleton skeleton-text-sm"></div>
-                <div class="skeleton skeleton-text-md"></div>
-              </div>
-            </div>
-            <div class="skeleton-info-item">
-              <div class="skeleton skeleton-icon"></div>
-              <div class="skeleton-text-group">
-                <div class="skeleton skeleton-text-sm"></div>
-                <div class="skeleton skeleton-text-md"></div>
-              </div>
-            </div>
-          </div>
+          <div class="skeleton skeleton-location"></div>
         </div>
 
         <!-- Error State -->
@@ -150,28 +135,14 @@
                   ></span>
                 </span>
               </div>
-            </div>
-          </div>
 
-          <!-- Location Information -->
-          <div id="location-info" class="location-info">
-            <div class="info-card">
-              <div class="info-item">
-                <svg
-                  class="icon"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                <div>
-                  <div class="info-label">Location</div>
-                  <div id="location" class="info-value">--</div>
-                </div>
+              <div id="location-row" class="location-row hidden">
+                <span
+                  id="location-flag"
+                  class="location-flag"
+                  aria-hidden="true"
+                ></span>
+                <span id="location" class="location-value"></span>
               </div>
             </div>
           </div>

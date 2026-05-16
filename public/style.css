@@ -349,57 +349,10 @@ body {
   border-radius: var(--radius-lg);
 }
 
-.skeleton-card {
-  background-color: var(--bg-secondary);
-  backdrop-filter: blur(12px) saturate(1.2);
-  -webkit-backdrop-filter: blur(12px) saturate(1.2);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-md);
-  box-shadow: var(--shadow-md);
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--spacing-lg);
-}
-
-@media (min-width: 640px) {
-  .skeleton-card {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.skeleton-info-item {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  background-color: var(--bg-tertiary);
-  border-radius: var(--radius-md);
-}
-
-.skeleton-icon {
-  width: 24px;
-  height: 24px;
+.skeleton-location {
+  width: clamp(180px, 40vw, 280px);
+  height: 1.125rem;
   border-radius: var(--radius-sm);
-  flex-shrink: 0;
-}
-
-.skeleton-text-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.skeleton-text-sm {
-  width: 60px;
-  height: 0.75rem;
-}
-
-.skeleton-text-md {
-  width: 140px;
-  height: 1.1rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -651,73 +604,36 @@ body {
 /* ============================================
    Location Information
    ============================================ */
-.location-info {
-  width: 100%;
-}
-
-.info-card {
-  background-color: var(--bg-secondary);
-  backdrop-filter: blur(12px) saturate(1.2);
-  -webkit-backdrop-filter: blur(12px) saturate(1.2);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-md);
-  box-shadow: var(--shadow-md);
-  transition: box-shadow var(--transition-base);
-}
-
-.info-card:hover {
-  box-shadow: var(--shadow-lg);
-}
-
-.info-item {
+/* ============================================
+   Location Row (inside ip-wrapper)
+   ============================================ */
+.location-row {
   display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  background-color: var(--bg-tertiary);
-  border-radius: var(--radius-md);
-  transition: background-color var(--transition-fast);
-  animation: fadeIn 0.5s ease both;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+  animation: fadeIn 0.5s ease 0.2s both;
 }
 
-.info-item:nth-child(1) {
-  animation-delay: 0.1s;
-}
-.info-item:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.info-item:hover {
-  background-color: var(--accent-light);
-}
-
-.info-item .icon {
-  width: 24px;
-  height: 24px;
-  color: var(--accent-primary);
+.location-flag {
+  display: inline-block;
+  font-size: 1.25em;
+  border-radius: 2px;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
-.info-label {
-  font-size: 0.875rem;
+.location-value {
+  font-size: clamp(0.875rem, 2vw, 1.125rem);
   font-weight: 500;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.25rem;
-}
-
-.info-value {
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
-  font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   word-break: break-word;
 }
 
 /* Shimmer placeholder while geo data loads */
-.info-value--loading {
+.location-value--loading {
   min-width: 120px;
   border-radius: var(--radius-sm);
   color: transparent;
@@ -732,32 +648,9 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .info-value--loading {
+  .location-value--loading {
     animation: none;
     background: var(--bg-tertiary);
-  }
-}
-
-/* ============================================
-   Inline Flag Icon (mobile only)
-   ============================================ */
-.info-value {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.location-flag {
-  display: inline-block;
-  font-size: 1.25em;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-@media (min-width: 640px) {
-  .location-flag {
-    display: none;
   }
 }
 
@@ -807,7 +700,6 @@ body {
   .container {
     padding: var(--spacing-lg);
   }
-
 }
 
 @media (min-width: 768px) {
@@ -819,10 +711,6 @@ body {
     font-size: clamp(1.75rem, 4vw, 3.5rem);
     word-break: normal;
     letter-spacing: 0.05em;
-  }
-
-  .info-card {
-    padding: var(--spacing-xl);
   }
 }
 
@@ -903,7 +791,6 @@ body {
   }
 
   .copyable,
-  .info-card,
   .ip-wrapper {
     border-width: 2px;
   }
