@@ -41,6 +41,7 @@ mkdir -p "$GEODATA_DIR"
 download_db() {
     local file_code="$1"
     local output_name="$2"
+    local min_size="$3"
     local tmp_file
     tmp_file="$(mktemp)"
 
@@ -50,6 +51,18 @@ download_db() {
 
     # Download to temp file
     curl -Ls --fail -o "$tmp_file" "$url"
+
+    # Validate the downloaded file is a real database, not an error page
+    local file_size
+    file_size="$(stat -c%s "$tmp_file" 2>/dev/null || stat -f%z "$tmp_file" 2>/dev/null || echo 0)"
+    if [ "$file_size" -lt "${min_size:-1048576}" ]; then
+        echo "Error: Downloaded file for ${file_code} is only ${file_size} bytes (expected at least ${min_size:-1048576})."
+        echo "The download token may be rate-limited or invalid. Response content:"
+        head -c 200 "$tmp_file"
+        echo ""
+        rm -f "$tmp_file"
+        exit 1
+    fi
 
     # Check if it's a ZIP archive and extract if so
     if unzip -q "$tmp_file" -d "${tmp_file}.d" 2>/dev/null; then
@@ -76,8 +89,8 @@ download_db() {
     echo "  ${output_name} saved (${size})"
 }
 
-download_db "$CITY_CODE" "$CITY_FILE"
-download_db "$ASN_CODE" "$ASN_FILE"
+download_db "$CITY_CODE" "$CITY_FILE" 5242880
+download_db "$ASN_CODE" "$ASN_FILE" 1048576
 
 echo ""
 echo "Done! IP2Location LITE databases saved to: ${GEODATA_DIR}/"

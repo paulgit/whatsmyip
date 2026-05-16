@@ -20,8 +20,10 @@
     ipLive: document.getElementById("ip-live"),
     asnDisplay: document.getElementById("asn-display"),
     asnValue: document.getElementById("asn-value"),
+    asnName: document.getElementById("asn-name"),
+    cidrRow: document.getElementById("cidr-row"),
+    cidrValue: document.getElementById("cidr-value"),
     location: document.getElementById("location"),
-    isp: document.getElementById("isp"),
     locationInfo: document.getElementById("location-info"),
     flagBg: document.getElementById("flag-bg"),
   };
@@ -47,6 +49,14 @@
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         handleCopyASN();
+      }
+    });
+
+    elements.cidrValue.addEventListener("click", handleCopyCIDR);
+    elements.cidrValue.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleCopyCIDR();
       }
     });
 
@@ -191,24 +201,21 @@
       elements.locationInfo.style.display = "none";
     }
 
-    // Display ISP information
-    if (data.org) {
-      elements.isp.textContent = data.org;
-    } else {
-      elements.isp.textContent = "Unknown";
-    }
-
-    // Display ASN information
     if (data.asn) {
       elements.asnValue.textContent = data.asn;
+      elements.asnName.textContent = data.asn_name || "";
+      if (data.cidr) {
+        elements.cidrValue.textContent = data.cidr;
+        elements.cidrRow.classList.remove("hidden");
+      } else {
+        elements.cidrRow.classList.add("hidden");
+      }
       elements.asnDisplay.classList.remove("hidden");
     } else {
       elements.asnDisplay.classList.add("hidden");
     }
 
-    // Remove shimmer placeholders once data is loaded
     elements.location.classList.remove("info-value--loading");
-    elements.isp.classList.remove("info-value--loading");
   }
 
   /**
@@ -216,7 +223,6 @@
    */
   function hideGeoPlaceholders() {
     elements.location.classList.remove("info-value--loading");
-    elements.isp.classList.remove("info-value--loading");
   }
 
   /**
@@ -233,6 +239,15 @@
     const asn = elements.asnValue.textContent;
     if (!asn || asn === "--" || asn === "Unknown") return;
     await copyText(asn, elements.asnValue);
+  }
+
+  /**
+   * Copy CIDR range to clipboard
+   */
+  async function handleCopyCIDR() {
+    const cidr = elements.cidrValue.textContent;
+    if (!cidr) return;
+    await copyText(cidr, elements.cidrValue);
   }
 
   /**
@@ -316,7 +331,6 @@
 
     // Add shimmer to geo value placeholders
     elements.location.classList.add("info-value--loading");
-    elements.isp.classList.add("info-value--loading");
   }
 
   /**

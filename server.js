@@ -12,6 +12,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const { IP2Location } = require("ip2location-nodejs");
+const { initCidrLookup, lookupCidr } = require("./src/cidrLookup");
 
 const FLAG_ICONS_PATH = path.join(__dirname, "node_modules", "flag-icons");
 const GEODATA_DIR = path.join(__dirname, "geodata");
@@ -52,6 +53,7 @@ async function initGeoIP() {
       asnDb = new IP2Location();
       await asnDb.openAsync(asnDbPath);
       console.log("IP2Location ASN database loaded");
+      initCidrLookup(asnDbPath);
     } catch (err) {
       console.warn("IP2Location ASN database not available:", err.message);
       asnDb = null;
@@ -149,17 +151,34 @@ function getIPInfo(ip) {
     try {
       const city = cityDb.getAll(ip);
       if (city) {
-        if (isGeoField(city.city)) { result.city = city.city; hasData = true; }
-        if (isGeoField(city.region)) { result.region = city.region; hasData = true; }
-        if (isGeoField(city.countryShort)) { result.country = city.countryShort; hasData = true; }
-        if (isGeoField(city.countryLong)) { result.country_name = city.countryLong; hasData = true; }
-        if (isGeoField(city.zipCode)) { result.postal = city.zipCode; hasData = true; }
-        if (isGeoField(city.timeZone)) { result.timezone = city.timeZone; hasData = true; }
+        if (isGeoField(city.city)) {
+          result.city = city.city;
+          hasData = true;
+        }
+        if (isGeoField(city.region)) {
+          result.region = city.region;
+          hasData = true;
+        }
+        if (isGeoField(city.countryShort)) {
+          result.country = city.countryShort;
+          hasData = true;
+        }
+        if (isGeoField(city.countryLong)) {
+          result.country_name = city.countryLong;
+          hasData = true;
+        }
+        if (isGeoField(city.zipCode)) {
+          result.postal = city.zipCode;
+          hasData = true;
+        }
+        if (isGeoField(city.timeZone)) {
+          result.timezone = city.timeZone;
+          hasData = true;
+        }
         if (isGeoField(city.latitude) && isGeoField(city.longitude)) {
           result.loc = `${city.latitude},${city.longitude}`;
           hasData = true;
         }
-        if (isGeoField(city.isp)) { result.org = city.isp; hasData = true; }
       }
     } catch (err) {
       console.error("City lookup error:", err.message);
@@ -171,12 +190,27 @@ function getIPInfo(ip) {
       const asn = asnDb.getAll(ip);
       if (asn) {
         if (isGeoField(asn.as)) {
-          result.org = asn.as; // ASN org name preferred over city ISP; intentionally overwrites
+          // Extract ASN name by removing the leading "AS<number> " prefix
+          const asnNameMatch = asn.as.match(/^AS\d+\s+(.*)$/);
+          result.asn_name = asnNameMatch ? asnNameMatch[1] : asn.as;
           hasData = true;
         }
         if (isGeoField(asn.asn)) {
           result.asn = `AS${asn.asn}`;
           hasData = true;
+        }
+        if (isGeoField(asn.asCidr)) {
+          result.cidr = asn.asCidr;
+          hasData = true;
+        } else {
+          // Fallback: compute CIDR from the database IP range
+          // (the LITE BIN file returns "-" for asCidr even though CIDR
+          // data exists in the CSV format, so we read ipFrom/ipTo directly)
+          const cidr = lookupCidr(ip);
+          if (cidr) {
+            result.cidr = cidr;
+            hasData = true;
+          }
         }
       }
     } catch (err) {
