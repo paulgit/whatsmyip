@@ -211,7 +211,7 @@
     // Display ASN information
     if (data.asn) {
       elements.asnValue.textContent = data.asn;
-      elements.asnName.textContent = data.asn_name ? ` ${data.asn_name}` : "";
+      elements.asnName.textContent = data.asn_name || "";
       if (data.cidr) {
         elements.cidrValue.textContent = data.cidr;
         elements.cidrValue.classList.remove("hidden");

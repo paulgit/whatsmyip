@@ -551,6 +551,7 @@ body {
     font-size: clamp(0.875rem, 2vw, 1.125rem);
     font-weight: 400;
     color: var(--text-tertiary);
+    margin-left: 0.35rem;
     margin-right: 0.5rem;
 }
 
