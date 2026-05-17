@@ -23,8 +23,9 @@
     asnName: document.getElementById("asn-name"),
     cidrRow: document.getElementById("cidr-row"),
     cidrValue: document.getElementById("cidr-value"),
+    locationRow: document.getElementById("location-row"),
+    locationFlag: document.getElementById("location-flag"),
     location: document.getElementById("location"),
-    locationInfo: document.getElementById("location-info"),
     flagBg: document.getElementById("flag-bg"),
   };
 
@@ -117,9 +118,9 @@
       displayGeoInfo(infoData);
     } catch (error) {
       console.error("Error fetching geolocation:", error);
-      // IP is still visible; just hide the location section
+      // IP is still visible; just hide the location row
       hideGeoPlaceholders();
-      elements.locationInfo.style.display = "none";
+      elements.locationRow.classList.add("hidden");
     }
   }
 
@@ -175,30 +176,27 @@
 
       const locationText = locationParts.join(", ") || "Unknown";
 
-      // Set full-page flag background and inline flag icon
-      if (data.country && elements.flagBg) {
+      if (data.country) {
         const raw = data.country.toLowerCase();
         const cc = /^[a-z]{2}$/.test(raw) ? raw : null;
         if (cc) {
+          // Set full-page flag background
           elements.flagBg.className = `flag-bg fib fi-${cc}`;
           elements.flagBg.classList.add("flag-bg--visible");
-          const flag = document.createElement("span");
-          flag.className = `location-flag fi fi-${cc}`;
-          flag.setAttribute("aria-hidden", "true");
-          const text = document.createElement("span");
-          text.className = "location-text";
-          text.textContent = locationText;
-          elements.location.replaceChildren(flag, text);
+          // Set inline flag emoji
+          elements.locationFlag.className = `location-flag fi fi-${cc}`;
+          elements.locationFlag.style.display = "";
         } else {
-          elements.location.textContent = locationText;
+          elements.locationFlag.style.display = "none";
         }
       } else {
-        elements.location.textContent = locationText;
+        elements.locationFlag.style.display = "none";
       }
 
-      elements.locationInfo.style.display = "block";
+      elements.location.textContent = locationText;
+      elements.locationRow.classList.remove("hidden");
     } else {
-      elements.locationInfo.style.display = "none";
+      elements.locationRow.classList.add("hidden");
     }
 
     if (data.asn) {
@@ -215,14 +213,14 @@
       elements.asnDisplay.classList.add("hidden");
     }
 
-    elements.location.classList.remove("info-value--loading");
+    elements.location.classList.remove("location-value--loading");
   }
 
   /**
    * Remove shimmer effect from geo placeholders when geo data is unavailable
    */
   function hideGeoPlaceholders() {
-    elements.location.classList.remove("info-value--loading");
+    elements.location.classList.remove("location-value--loading");
   }
 
   /**
@@ -329,8 +327,8 @@
     elements.error.classList.add("hidden");
     elements.mainContent.classList.add("hidden");
 
-    // Add shimmer to geo value placeholders
-    elements.location.classList.add("info-value--loading");
+    // Add shimmer to geo value placeholder
+    elements.location.classList.add("location-value--loading");
   }
 
   /**
