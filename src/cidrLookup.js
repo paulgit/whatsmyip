@@ -37,7 +37,7 @@ function initCidrLookup(dbPath) {
 
 /**
  * Convert a BigInt IP number to dotted-decimal notation (IPv4)
- * @param {BigInt} num - IP address as a BigInt
+ * @param {bigint} num - IP address as a BigInt
  * @returns {string} Dotted-decimal IP address string
  */
 function bigIntToIPv4(num) {
@@ -47,7 +47,7 @@ function bigIntToIPv4(num) {
 
 /**
  * Convert a BigInt IP number to IPv6 colon-hex notation
- * @param {BigInt} num - IP address as a BigInt
+ * @param {bigint} num - IP address as a BigInt
  * @returns {string} IPv6 address string
  */
 function bigIntToIPv6(num) {
@@ -116,8 +116,8 @@ function ipv6ToBigInt(ip) {
  * (which uses JavaScript Number and bitwise operators that overflow for
  * IPs >= 128.0.0.0).
  *
- * @param {BigInt} startIp - Start of the range (inclusive)
- * @param {BigInt} endIp - End of the range (inclusive)
+ * @param {bigint} startIp - Start of the range (inclusive)
+ * @param {bigint} endIp - End of the range (inclusive)
  * @param {number} maxBits - 32 for IPv4, 128 for IPv6
  * @returns {string[]} Array of CIDR strings
  */
@@ -184,12 +184,12 @@ function rangeToCidr(ipFromStr, ipToStr, ipType) {
       const startIp = ipv4ToBigInt(ipFromStr);
       const endIp = ipv4ToBigInt(ipToStr);
       const cidrs = ipRangeToCidrList(startIp, endIp, 32);
-      return cidrs.join(", ");
+      return cidrs.length > 0 ? cidrs.join(", ") : null;
     } else if (ipType === 6) {
       const startIp = ipv6ToBigInt(ipFromStr);
       const endIp = ipv6ToBigInt(ipToStr);
       const cidrs = ipRangeToCidrList(startIp, endIp, 128);
-      return cidrs.join(", ");
+      return cidrs.length > 0 ? cidrs.join(", ") : null;
     }
     return null;
   } catch (_err) {

@@ -266,6 +266,10 @@ describe("rangeToCidr", () => {
     expect(rangeToCidr("1.2.3.4", "1.2.3.4", 0)).toBeNull();
   });
 
+  it("returns null for inverted range (start > end)", () => {
+    expect(rangeToCidr("10.0.0.255", "10.0.0.0", 4)).toBeNull();
+  });
+
   it("handles IPv6 single host", () => {
     expect(rangeToCidr("::1", "::1", 6)).toBe(
       "0000:0000:0000:0000:0000:0000:0000:0001/128",
