@@ -50,6 +50,25 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
+      - name: Get geodata cache key
+        id: cache-date
+        run: echo "key=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
+
+      - name: Cache IP2Location geodata
+        id: cache-geodata
+        uses: actions/cache@v4
+        with:
+          path: geodata
+          key: geodata-${{ runner.os }}-${{ steps.cache-date.outputs.key }}
+          restore-keys: |
+            geodata-${{ runner.os }}-
+
+      - name: Download geodata
+        if: steps.cache-geodata.outputs.cache-hit != 'true'
+        env:
+          IP2LOCATION_TOKEN: ${{ secrets.IP2LOCATION_TOKEN }}
+        run: ./scripts/download-geodata.sh
+
       - name: Build image for scanning
         id: build-scan
         uses: docker/build-push-action@v6
@@ -59,7 +78,6 @@ jobs:
           platforms: linux/amd64
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan
           build-args: |
-            IP2LOCATION_TOKEN=${{ secrets.IP2LOCATION_TOKEN }}
             ENV_APP_VERSION=${{ github.ref_name }}
           cache-from: type=gha
 
@@ -74,8 +92,8 @@ jobs:
           severity: HIGH,CRITICAL
 
       - name: Upload Trivy scan results to GitHub Security tab
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
 
@@ -88,7 +106,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            IP2LOCATION_TOKEN=${{ secrets.IP2LOCATION_TOKEN }}
             ENV_APP_VERSION=${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
