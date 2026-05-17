@@ -67,7 +67,12 @@ jobs:
         if: steps.cache-geodata.outputs.cache-hit != 'true'
         env:
           IP2LOCATION_TOKEN: ${{ secrets.IP2LOCATION_TOKEN }}
-        run: ./scripts/download-geodata.sh
+        run: |
+          if [ -z "$IP2LOCATION_TOKEN" ]; then
+            echo "::error::IP2LOCATION_TOKEN secret is not set. Add it to your repository secrets at lite.ip2location.com"
+            exit 1
+          fi
+          ./scripts/download-geodata.sh
 
       - name: Build image for scanning
         id: build-scan

@@ -47,10 +47,11 @@ download_db() {
 
     echo "Downloading ${file_code}..."
 
-    local url="${BASE_URL}/?token=${TOKEN}&file=${file_code}"
-
-    # Download to temp file
-    curl -Ls --fail -o "$tmp_file" "$url"
+    # Use -G + --data-urlencode so tokens with special characters are handled correctly
+    curl -Ls --fail -G "$BASE_URL" \
+        --data-urlencode "token=${TOKEN}" \
+        --data-urlencode "file=${file_code}" \
+        -o "$tmp_file"
 
     # Validate the downloaded file is a real database, not an error page
     local file_size
