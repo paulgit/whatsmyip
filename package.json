@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "download-geodata": "bash scripts/download-geodata.sh"
   },
   "keywords": [
@@ -23,5 +25,8 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.6"
   }
 }

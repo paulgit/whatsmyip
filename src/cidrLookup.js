@@ -10,6 +10,11 @@
  * This module works around the limitation by reading ipFrom/ipTo from the
  * matching database record and converting the range to CIDR notation.
  *
+ * The IP range-to-CIDR conversion is implemented with pure BigInt arithmetic
+ * to avoid the floating-point and 32-bit signed-integer bugs present in
+ * ip2location-nodejs's IPTools class, which causes IPs >= 128.0.0.0 to
+ * produce 256 individual /32 entries instead of a single /24.
+ *
  * @author Paul Git <paulgit@pm.me>
  * @license MIT
  */
@@ -18,9 +23,6 @@
 
 const fs = require("fs");
 const net = require("net");
-const { IPTools } = require("ip2location-nodejs");
-
-const ipTools = new IPTools();
 
 /** ASN database file path (set during initialisation) */
 let asnDbPath = null;
@@ -35,7 +37,7 @@ function initCidrLookup(dbPath) {
 
 /**
  * Convert a BigInt IP number to dotted-decimal notation (IPv4)
- * @param {BigInt} num - IP address as a BigInt
+ * @param {bigint} num - IP address as a BigInt
  * @returns {string} Dotted-decimal IP address string
  */
 function bigIntToIPv4(num) {
@@ -45,7 +47,7 @@ function bigIntToIPv4(num) {
 
 /**
  * Convert a BigInt IP number to IPv6 colon-hex notation
- * @param {BigInt} num - IP address as a BigInt
+ * @param {bigint} num - IP address as a BigInt
  * @returns {string} IPv6 address string
  */
 function bigIntToIPv6(num) {
@@ -58,65 +60,141 @@ function bigIntToIPv6(num) {
 }
 
 /**
+ * Convert an IPv4 address string to a BigInt.
+ * @param {string} ip - Dotted-decimal IPv4 address
+ * @returns {BigInt} Numeric representation
+ */
+function ipv4ToBigInt(ip) {
+  const parts = ip.split(".");
+  return (
+    (BigInt(parts[0]) << 24n) |
+    (BigInt(parts[1]) << 16n) |
+    (BigInt(parts[2]) << 8n) |
+    BigInt(parts[3])
+  );
+}
+
+/**
+ * Convert an IPv6 address string to a BigInt.
+ * Handles compressed notation with ::
+ * @param {string} ip - IPv6 address string
+ * @returns {BigInt} Numeric representation
+ */
+function ipv6ToBigInt(ip) {
+  let fullIp = ip;
+
+  // Handle IPv4-mapped IPv6 addresses like ::ffff:192.0.2.1
+  const ipv4MappedMatch = fullIp.match(
+    /^(?:0*:)*:(?:0*:)*ffff:(\d+\.\d+\.\d+\.\d+)$/i,
+  );
+  if (ipv4MappedMatch) {
+    return (0xffffn << 32n) | ipv4ToBigInt(ipv4MappedMatch[1]);
+  }
+
+  if (fullIp.includes("::")) {
+    const halves = fullIp.split("::");
+    const left = halves[0] ? halves[0].split(":") : [];
+    const right = halves[1] ? halves[1].split(":") : [];
+    const missing = 8 - left.length - right.length;
+    const middle = Array(missing).fill("0");
+    fullIp = [...left, ...middle, ...right].join(":");
+  }
+
+  const parts = fullIp.split(":");
+  let result = 0n;
+  for (const part of parts) {
+    result = (result << 16n) | BigInt(parseInt(part, 16));
+  }
+  return result;
+}
+
+/**
+ * Convert an IP range (from, to) to a list of CIDR blocks.
+ *
+ * Uses BigInt arithmetic throughout to avoid the floating-point and 32-bit
+ * signed-integer bugs present in the ip2location-nodejs IPTools class
+ * (which uses JavaScript Number and bitwise operators that overflow for
+ * IPs >= 128.0.0.0).
+ *
+ * @param {bigint} startIp - Start of the range (inclusive)
+ * @param {bigint} endIp - End of the range (inclusive)
+ * @param {number} maxBits - 32 for IPv4, 128 for IPv6
+ * @returns {string[]} Array of CIDR strings
+ */
+function ipRangeToCidrList(startIp, endIp, maxBits) {
+  const cidrs = [];
+  let current = startIp;
+
+  while (current <= endIp) {
+    // The maximum block size is limited by alignment of the current IP.
+    // Find how many trailing zero bits current has — that determines the
+    // largest power-of-2 block that could start here.
+    let maxBitsForAlignment;
+    if (current === 0n) {
+      maxBitsForAlignment = maxBits;
+    } else {
+      // Count trailing zeros in current
+      let temp = current;
+      maxBitsForAlignment = 0;
+      while ((temp & 1n) === 0n && maxBitsForAlignment < maxBits) {
+        maxBitsForAlignment++;
+        temp >>= 1n;
+      }
+    }
+
+    // Also limit by the remaining range size
+    const rangeSize = endIp - current + 1n;
+    let maxBitsForRange = 0;
+    let sizeTemp = rangeSize;
+    while (sizeTemp > 1n) {
+      maxBitsForRange++;
+      sizeTemp >>= 1n;
+    }
+
+    // If the range size is not a power of 2, we can't cover it all at once
+    // so use the smaller of the two constraints.
+    const prefixLen = maxBits - Math.min(maxBitsForAlignment, maxBitsForRange);
+    const blockSize = 1n << BigInt(maxBits - prefixLen);
+
+    const networkAddr = current;
+    cidrs.push(
+      `${maxBits === 32 ? bigIntToIPv4(networkAddr) : bigIntToIPv6(networkAddr)}/${prefixLen}`,
+    );
+
+    current += blockSize;
+  }
+
+  return cidrs;
+}
+
+/**
  * Convert an IP range (from, to) to CIDR notation.
- * Uses the IPTools class from ip2location-nodejs for accurate conversion,
- * with a manual fallback for IPv4.
+ *
+ * Uses pure BigInt arithmetic to avoid the floating-point and 32-bit
+ * signed-integer bugs in the ip2location-nodejs IPTools class.
+ *
  * @param {string} ipFromStr - Start IP address
  * @param {string} ipToStr - End IP address (inclusive)
  * @param {number} ipType - 4 for IPv4, 6 for IPv6
- * @returns {string|null} CIDR string, or null if conversion fails
+ * @returns {string|null} CIDR string (e.g., "1.0.0.0/24"), or null on error
  */
 function rangeToCidr(ipFromStr, ipToStr, ipType) {
   try {
     if (ipType === 4) {
-      const cidrs = ipTools.ipV4ToCIDR(ipFromStr, ipToStr);
-      if (cidrs && cidrs.length > 0) {
-        return cidrs.join(", ");
-      }
+      const startIp = ipv4ToBigInt(ipFromStr);
+      const endIp = ipv4ToBigInt(ipToStr);
+      const cidrs = ipRangeToCidrList(startIp, endIp, 32);
+      return cidrs.length > 0 ? cidrs.join(", ") : null;
     } else if (ipType === 6) {
-      const cidrs = ipTools.ipV6ToCIDR(ipFromStr, ipToStr);
-      if (cidrs && cidrs.length > 0) {
-        return cidrs.join(", ");
-      }
+      const startIp = ipv6ToBigInt(ipFromStr);
+      const endIp = ipv6ToBigInt(ipToStr);
+      const cidrs = ipRangeToCidrList(startIp, endIp, 128);
+      return cidrs.length > 0 ? cidrs.join(", ") : null;
     }
+    return null;
   } catch (_err) {
-    // Fall through to manual calculation
+    return null;
   }
-
-  // Fallback: manual CIDR calculation for IPv4
-  if (ipType === 4) {
-    try {
-      const from = BigInt(
-        ipFromStr
-          .split(".")
-          .reduce((acc, octet) => (acc << 8n) + BigInt(octet), 0n),
-      );
-      const to = BigInt(
-        ipToStr
-          .split(".")
-          .reduce((acc, octet) => (acc << 8n) + BigInt(octet), 0n),
-      );
-      const xor = from ^ to;
-
-      if (xor === 0n) {
-        return `${bigIntToIPv4(from)}/32`;
-      }
-
-      let prefixLen = 32;
-      let temp = xor;
-      while (temp !== 0n && prefixLen > 0) {
-        prefixLen--;
-        temp >>= 1n;
-      }
-
-      const networkAddr = from & (0xffffffffn << BigInt(32 - prefixLen));
-      return `${bigIntToIPv4(networkAddr)}/${prefixLen}`;
-    } catch (_e) {
-      return null;
-    }
-  }
-
-  return null;
 }
 
 /**
@@ -141,7 +219,9 @@ function ip2No(ip) {
   let fullIp = ip;
 
   // Handle IPv4-mapped IPv6 addresses like ::ffff:192.0.2.1
-  const ipv4MappedMatch = fullIp.match(/^(?:0*:)*:(?:0*:)*ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  const ipv4MappedMatch = fullIp.match(
+    /^(?:0*:)*:(?:0*:)*ffff:(\d+\.\d+\.\d+\.\d+)$/i,
+  );
   if (ipv4MappedMatch) {
     return BigInt(0xffffn << 32n) | BigInt(dot2Num(ipv4MappedMatch[1]));
   }
@@ -303,4 +383,14 @@ function lookupCidr(ip) {
   }
 }
 
-module.exports = { initCidrLookup, lookupCidr };
+module.exports = {
+  initCidrLookup,
+  lookupCidr,
+  // Exported for testing
+  ipv4ToBigInt,
+  ipv6ToBigInt,
+  bigIntToIPv4,
+  bigIntToIPv6,
+  ipRangeToCidrList,
+  rangeToCidr,
+};
