@@ -3,6 +3,8 @@
 FROM node:24.14.1-alpine3.23 AS deps
 WORKDIR /app
 
+RUN apk upgrade --no-cache
+
 # Install production dependencies
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
@@ -27,9 +29,12 @@ RUN mkdir -p /app/geodata && \
         touch /app/geodata/.no-data; \
     fi
 
-FROM gcr.io/distroless/nodejs24-debian13:nonroot AS runner
+FROM node:24.14.1-alpine3.23 AS runner
 
 WORKDIR /app
+
+RUN apk upgrade --no-cache && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -39,18 +44,17 @@ ENV APP_VERSION=${ENV_APP_VERSION}
 
 # Copy only runtime essentials
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package*.json ./
+COPY --from=deps /app/package.json ./
 COPY --from=deps /app/geodata ./geodata
 COPY server.js ./server.js
 COPY src ./src
 COPY public ./public
 
-# The :nonroot variant already runs as UID 65532 (non-root), so no explicit USER needed
+USER node
 
-# Expose port
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
-  CMD ["/nodejs/bin/node", "-e", "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+  CMD ["node", "-e", "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
 
-CMD ["server.js"]
+CMD ["node", "server.js"]
