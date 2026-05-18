@@ -1,6 +1,6 @@
-# What’s My IP
+# What's My IP
 
-A small Node.js/Express app that shows **your public IP address** in a clean web UI and via simple API endpoints. Optionally, it enriches the result with **IPInfo** data (location, ISP, and hostname).
+A small Node.js/Express app that shows **your public IP address** in a clean web UI and via simple API endpoints. It enriches the result with **IP2Location LITE** data (city, region, country, ASN, and CIDR range) using local binary databases — no external API calls at runtime.
 
 - Demo: https://ip.paulg.it
 - License: MIT
@@ -9,9 +9,9 @@ A small Node.js/Express app that shows **your public IP address** in a clean web
 
 ## What you get
 
-- **Web UI**: IP (and hostname when available), location, ISP, dark/light mode toggle, copy-to-clipboard
+- **Web UI**: IP address, location with country flag, ASN name and CIDR range, dark/light mode toggle, copy-to-clipboard
 - **API**: HTML / JSON / Text formats + dedicated endpoints
-- **Optional IPInfo enrichment**: works without a token, but fewer details
+- **Local geolocation**: IP2Location LITE databases for fast, private lookups (~1-5ms)
 
 ---
 
@@ -32,19 +32,26 @@ npm run dev
 Then open:
 - http://localhost:3000
 
-### 3) (Optional) Enable IPInfo enrichment
-Copy the template and add your IPInfo token:
+### 3) Download geolocation databases
+Copy the template and add your IP2Location download token:
 ```bash
 cp .env.example .env
 ```
 
 Edit `.env` and set:
 ```bash
-IPINFO_TOKEN=your_token_here
+IP2LOCATION_TOKEN=your_token_here
 ```
 
-Get a token:
-- https://ipinfo.io/signup
+Get a free token:
+- https://lite.ip2location.com
+
+Then download the databases:
+```bash
+npm run download-geodata
+```
+
+> The app will still run without geodata (it returns the IP address only), but location, ASN, and CIDR data won't be available.
 
 ---
 
@@ -53,8 +60,10 @@ Get a token:
 ### Build and run (single container)
 ```bash
 docker build -t whatsmyip .
-docker run --rm -p 3000:3000 -e IPINFO_TOKEN=your_token_here whatsmyip
+docker run --rm -p 3000:3000 whatsmyip
 ```
+
+> Geolocation databases must be baked into the image or mounted at `/app/geodata/`. See the Dockerfile for details.
 
 Open:
 - http://localhost:3000
@@ -135,10 +144,11 @@ From the project root:
 docker compose up -d
 ```
 
-If you need IPInfo enrichment, provide the env var:
+If you need to download geodata before building:
 
 ```bash
-IPINFO_TOKEN=your_token_here docker compose up -d
+IP2LOCATION_TOKEN=your_token_here npm run download-geodata
+docker compose up -d
 ```
 
 ### Development run with Compose overrides
@@ -169,11 +179,13 @@ Example:
 ```json
 {
   "ip": "203.0.113.42",
-  "hostname": "example.com",
   "city": "San Francisco",
   "region": "California",
   "country": "US",
-  "org": "AS15169 Google LLC"
+  "country_name": "United States",
+  "asn": "AS15169",
+  "asn_name": "Google LLC",
+  "cidr": "203.0.113.0/24"
 }
 ```
 
@@ -187,7 +199,7 @@ Example:
 
 ### Dedicated endpoints
 - `GET /api/ip` → `{ "ip": "…" }`
-- `GET /api/info` → `{ "ip": "…", "hostname": "…", ... }` (plus IPInfo fields when available)
+- `GET /api/info` → `{ "ip": "…", "city": "…", "asn": "…", "cidr": "…", ... }` (plus IP2Location fields when available)
 - `GET /health` → `{ "status": "ok", "timestamp": "…" }`
 
 ---
@@ -245,13 +257,13 @@ Create `.env` (optional):
 
 ```bash
 PORT=3000
-IPINFO_TOKEN=your_token_here
+IP2LOCATION_TOKEN=your_token_here  # required only for npm run download-geodata
 DEV_IP=8.8.8.8   # optional: override detected IP during local development
 ```
 
 Notes:
-- Without `IPINFO_TOKEN`, the service still runs and returns your IP, but enrichment may be missing.
-- IPInfo has a free tier; see https://ipinfo.io/
+- `IP2LOCATION_TOKEN` is only needed to download the geolocation databases via `npm run download-geodata`. It is not used by the app at runtime. Get a free token at https://lite.ip2location.com
+- Without geodata databases, the service still runs and returns your IP, but location, ASN, and CIDR data won't be available.
 - `DEV_IP` is for local development only — remove it before deploying.
 
 ---
@@ -261,10 +273,17 @@ Notes:
 ```text
 whatsmyip/
 ├── server.js          # Express server + API endpoints
+├── src/
+│   └── cidrLookup.js  # CIDR range calculation (BigInt-based)
+├── tests/
+│   └── cidrLookup.test.js
+├── geodata/           # IP2Location LITE databases (downloaded separately)
 ├── public/            # Static frontend
 │   ├── index.html
 │   ├── style.css
 │   └── app.js
+├── scripts/
+│   └── download-geodata.sh
 ├── package.json
 ├── Dockerfile
 ├── docker-compose.yml
@@ -275,9 +294,9 @@ whatsmyip/
 
 ## Troubleshooting
 
-### “Geolocation data unavailable”
-- Set `IPINFO_TOKEN` in `.env` (or in Docker `-e IPINFO_TOKEN=...`)
-- Confirm the token is valid
+### "Geolocation data unavailable"
+- Ensure the geodata databases exist in `geodata/` — run `npm run download-geodata` (requires `IP2LOCATION_TOKEN`)
+- Confirm the token is valid at https://lite.ip2location.com
 - Try simulating a public IP with `x-forwarded-for` as shown above
 
 ### Port already in use
@@ -288,7 +307,8 @@ If `3000` is already taken:
 ---
 
 ## Credits
-- Geolocation data: https://ipinfo.io
+- Geolocation data: [IP2Location LITE](https://lite.ip2location.com)
+- Country flags: [flag-icons](https://github.com/lipis/flag-icons)
 - Original PHP script inspiration: https://github.com/TestoEXE/whatsmyip
 
 ---
