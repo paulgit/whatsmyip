@@ -34,6 +34,7 @@ FROM node:24.14.1-alpine3.23 AS runner
 WORKDIR /app
 
 RUN apk upgrade --no-cache && \
+    apk add --no-cache curl unzip bash && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 ENV NODE_ENV=production
@@ -49,6 +50,7 @@ COPY --from=deps /app/geodata ./geodata
 COPY server.js ./server.js
 COPY src ./src
 COPY public ./public
+COPY scripts/download-geodata.sh ./scripts/download-geodata.sh
 
 USER node
 

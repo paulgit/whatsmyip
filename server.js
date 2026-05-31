@@ -11,6 +11,7 @@ require("dotenv").config();
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const { spawn } = require("child_process");
 const { IP2Location } = require("ip2location-nodejs");
 const { initCidrLookup, lookupCidr } = require("./src/cidrLookup");
 
@@ -306,6 +307,52 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
+async function reloadGeoIP() {
+  if (cityDb) { try { cityDb.close(); } catch (_) {} cityDb = null; }
+  if (asnDb) { try { asnDb.close(); } catch (_) {} asnDb = null; }
+  await initGeoIP();
+}
+
+function downloadDatabases() {
+  const scriptPath = path.join(__dirname, "scripts", "download-geodata.sh");
+  console.log("[geodata] Starting scheduled database refresh...");
+
+  return new Promise((resolve, reject) => {
+    const child = spawn("bash", [scriptPath], {
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    child.stdout.on("data", (d) => process.stdout.write(`[geodata] ${d}`));
+    child.stderr.on("data", (d) => process.stderr.write(`[geodata] ${d}`));
+
+    child.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`download-geodata.sh exited with code ${code}`));
+    });
+
+    child.on("error", reject);
+  });
+}
+
+function scheduleGeodbRefresh() {
+  const hours = parseFloat(process.env.GEODATA_REFRESH_HOURS || "0");
+  if (!hours || hours <= 0) return;
+
+  const ms = hours * 60 * 60 * 1000;
+  console.log(`[geodata] Scheduled refresh every ${hours}h`);
+
+  setInterval(async () => {
+    try {
+      await downloadDatabases();
+      await reloadGeoIP();
+      console.log("[geodata] Database refresh complete");
+    } catch (err) {
+      console.error("[geodata] Database refresh failed:", err.message);
+    }
+  }, ms);
+}
+
 // Start server
 initGeoIP().then(() => {
   app.listen(PORT, () => {
@@ -314,4 +361,5 @@ initGeoIP().then(() => {
       `GeoIP: City ${cityDb ? "loaded" : "unavailable"}, ASN ${asnDb ? "loaded" : "unavailable"}`,
     );
   });
+  scheduleGeodbRefresh();
 });
