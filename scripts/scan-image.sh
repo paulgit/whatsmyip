@@ -163,7 +163,18 @@ trivy_severity() {
   esac
 }
 
-# ── Update vulnerability database (Grype only; Trivy auto-updates) ─────────
+# ── Update vulnerability database ──────────────────────────────────────────
+# Trivy's built-in auto-update only fires when the cached DB is >12 hours old,
+# which means a CVE published in the last <12 h can be invisible locally while
+# CI (which always fetches a fresh DB) catches it. Force a download here so
+# local scans stay in sync with CI.
+if [[ "$SCANNER" == "trivy" && "${TRIVY_DB_AUTO_UPDATE:-true}" != "false" ]]; then
+  info "Updating Trivy vulnerability database..."
+  if ! trivy image --download-db-only --quiet 2>&1; then
+    warn "Trivy database update failed — continuing with existing database."
+  fi
+fi
+
 if [[ "$SCANNER" == "grype" && "${GRYPE_DB_AUTO_UPDATE:-true}" != "false" ]]; then
   info "Updating Grype vulnerability database..."
   if ! grype db update 2>&1 | tail -1; then
