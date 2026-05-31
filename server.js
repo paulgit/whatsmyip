@@ -315,7 +315,7 @@ async function reloadGeoIP() {
 
 function downloadDatabases() {
   const scriptPath = path.join(__dirname, "scripts", "download-geodata.sh");
-  console.log("[geodata] Starting scheduled database refresh...");
+  console.log("[geodata] Starting database refresh...");
 
   return new Promise((resolve, reject) => {
     const child = spawn("bash", [scriptPath], {
