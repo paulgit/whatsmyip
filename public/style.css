@@ -770,6 +770,30 @@ body {
 }
 
 /* ============================================
+   IPv6 Address — scaled-down to prevent overflow
+   ============================================ */
+.ip-address--v6 {
+  font-size: clamp(1rem, 3vw, 2.25rem);
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 768px) {
+  .ip-address--v6 {
+    font-size: clamp(1.25rem, 2.5vw, 2.25rem);
+    letter-spacing: 0.02em;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+}
+
+@media (max-width: 639px) {
+  .ip-address--v6 {
+    font-size: clamp(0.875rem, 5vw, 1.5rem);
+  }
+}
+
+/* ============================================
    Accessibility - Reduced Motion
    ============================================ */
 @media (prefers-reduced-motion: reduce) {

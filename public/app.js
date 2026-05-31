@@ -33,6 +33,59 @@
   let currentIP = "";
 
   /**
+   * Compress a fully-expanded IPv6 address to RFC 5952 canonical form.
+   * Accepts "addr" or "addr/prefix". Returns the abbreviated string.
+   */
+  function abbreviateIPv6(cidr) {
+    const slash = cidr.indexOf("/");
+    const addr = slash === -1 ? cidr : cidr.slice(0, slash);
+    const suffix = slash === -1 ? "" : cidr.slice(slash);
+
+    if (!addr.includes(":")) return cidr; // not IPv6
+
+    const groups = addr.split(":").map((g) => parseInt(g, 16));
+
+    // Find the longest run of consecutive zero groups (min length 2)
+    let bestStart = -1,
+      bestLen = 0,
+      curStart = -1,
+      curLen = 0;
+    for (let i = 0; i < groups.length; i++) {
+      if (groups[i] === 0) {
+        if (curStart === -1) {
+          curStart = i;
+          curLen = 0;
+        }
+        curLen++;
+        if (curLen > bestLen) {
+          bestStart = curStart;
+          bestLen = curLen;
+        }
+      } else {
+        curStart = -1;
+        curLen = 0;
+      }
+    }
+
+    let result;
+    if (bestLen < 2) {
+      result = groups.map((g) => g.toString(16)).join(":");
+    } else {
+      const before = groups
+        .slice(0, bestStart)
+        .map((g) => g.toString(16))
+        .join(":");
+      const after = groups
+        .slice(bestStart + bestLen)
+        .map((g) => g.toString(16))
+        .join(":");
+      result = before + "::" + after;
+    }
+
+    return result + suffix;
+  }
+
+  /**
    * Initialize the application
    */
   function init() {
@@ -103,6 +156,13 @@
       currentIP = ipData.ip || "--";
       elements.ipAddress.textContent = currentIP;
       elements.ipLive.textContent = currentIP;
+
+      // Scale down font for IPv6 addresses
+      if (currentIP.includes(":")) {
+        elements.ipAddress.classList.add("ip-address--v6");
+      } else {
+        elements.ipAddress.classList.remove("ip-address--v6");
+      }
 
       // Show main content with IP; location shows shimmer placeholders
       showMainContent();
@@ -203,7 +263,7 @@
       elements.asnValue.textContent = data.asn;
       elements.asnName.textContent = data.asn_name || "";
       if (data.cidr) {
-        elements.cidrValue.textContent = data.cidr;
+        elements.cidrValue.textContent = abbreviateIPv6(data.cidr);
         elements.cidrRow.classList.remove("hidden");
       } else {
         elements.cidrRow.classList.add("hidden");
