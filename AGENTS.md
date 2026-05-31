@@ -13,6 +13,7 @@ npm run dev          # Development server with auto-reload (Node watch mode)
 npm start            # Production server
 npm test             # Run tests once (Vitest)
 npm run test:watch   # Vitest in watch mode
+npm run lint         # Run ESLint
 npm run download-geodata  # Download IP2Location LITE .BIN databases (requires IP2LOCATION_TOKEN env var)
 ```
 
@@ -22,7 +23,9 @@ Docker:
 docker compose up -d # Production-like compose (no bind mounts, NODE_ENV=production)
 ```
 
-There is no linter configured.
+## Linting
+
+ESLint with flat config (`eslint.config.mjs`). Covers `server.js`, `src/`, `tests/`, and `public/` with appropriate environments (Node.js CommonJS, ESM for tests, browser for frontend). Run with `npm run lint`. Fix all errors before committing.
 
 ## Environment Variables
 

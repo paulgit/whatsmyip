@@ -368,7 +368,7 @@
 
     setTimeout(() => {
       element.classList.remove("copied");
-      element.setAttribute("title", "Click to copy");
+      element.setAttribute("title", originalTitle || "Click to copy");
     }, 2000);
   }
 
