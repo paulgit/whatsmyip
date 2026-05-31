@@ -335,6 +335,42 @@ function downloadDatabases() {
   });
 }
 
+async function refreshIfStale() {
+  const hours = parseFloat(process.env.GEODATA_REFRESH_HOURS || "0");
+  if (!hours || hours <= 0) return;
+
+  const thresholdMs = hours * 60 * 60 * 1000;
+  const dbPaths = [
+    path.join(GEODATA_DIR, "IP2LOCATION-LITE-DB11.BIN"),
+    path.join(GEODATA_DIR, "IP2LOCATION-LITE-ASN.BIN"),
+  ];
+
+  // Find the oldest file; a missing file is treated as maximally stale
+  let oldestMtimeMs = Date.now();
+  for (const p of dbPaths) {
+    try {
+      const { mtimeMs } = fs.statSync(p);
+      if (mtimeMs < oldestMtimeMs) oldestMtimeMs = mtimeMs;
+    } catch (_) {
+      oldestMtimeMs = 0;
+      break;
+    }
+  }
+
+  const ageMs = Date.now() - oldestMtimeMs;
+  if (ageMs < thresholdMs) return;
+
+  const ageHours = Math.round(ageMs / 3600000);
+  console.log(`[geodata] Databases are ${ageHours}h old (threshold ${hours}h), refreshing on startup...`);
+  try {
+    await downloadDatabases();
+    await reloadGeoIP();
+    console.log("[geodata] Startup refresh complete");
+  } catch (err) {
+    console.error("[geodata] Startup refresh failed, using existing databases:", err.message);
+  }
+}
+
 function scheduleGeodbRefresh() {
   const hours = parseFloat(process.env.GEODATA_REFRESH_HOURS || "0");
   if (!hours || hours <= 0) return;
@@ -354,12 +390,13 @@ function scheduleGeodbRefresh() {
 }
 
 // Start server
-initGeoIP().then(() => {
+initGeoIP().then(async () => {
   app.listen(PORT, () => {
     console.log(`What's My IP server running on http://localhost:${PORT}`);
     console.log(
       `GeoIP: City ${cityDb ? "loaded" : "unavailable"}, ASN ${asnDb ? "loaded" : "unavailable"}`,
     );
   });
+  await refreshIfStale();
   scheduleGeodbRefresh();
 });
