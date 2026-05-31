@@ -1,188 +1,62 @@
-# AGENTS.MD
+# AGENTS.md
 
-## Project Overview
+This file provides guidance to when working with code in this repository.
 
-This is a Node.js application designed to run in a Docker container with a strong emphasis on security, reliability, and maintainability.
+## What This Is
 
-## Tech Stack
+A Node.js/Express web service that returns a visitor's external IP address with geolocation enrichment. Lookups use local IP2Location LITE binary databases (1–5ms, no external API calls at runtime). Supports HTML, JSON, and plain-text response formats. Runs without geolocation databases and still returns the IP.
 
-* **Runtime:** Node.js (LTS version only)
-* **Package Manager:** npm (with `package-lock.json` committed)
-* **Containerisation:** Docker (multi-stage builds)
-* **Language:** JavaScript / TypeScript (as applicable)
-
----
-
-## Code Standards & Conventions
-
-### General
-
-* Use `strict mode` in all files.
-* Prefer `const` over `let`; never use `var`.
-* Use async/await over raw Promises or callbacks.
-* All functions must have JSDoc or TSDoc comments.
-* Keep files under 300 lines; extract modules when exceeding this.
-* Use named exports over default exports.
-
-### File & Directory Structure
-
-```
-├── src/              # Application source code
-│   ├── routes/       # HTTP route handlers
-│   ├── middleware/    # Express/Koa middleware
-│   ├── services/     # Business logic
-│   ├── models/       # Data models / schemas
-│   ├── utils/        # Shared utilities
-│   └── config/       # Configuration loaders
-├── tests/            # Test files (mirrors src/ structure)
-├── docker/           # Dockerfiles and compose files
-├── scripts/          # Build, deploy, and utility scripts
-├── .env.example      # Template for environment variables (never commit .env)
-├── Dockerfile        # Production Dockerfile
-├── docker-compose.yml
-└── package.json
-```
-
----
-
-## Security Rules (CRITICAL)
-
-These rules are **non-negotiable**. Every change must comply.
-
-### Environment & Secrets
-
-* **NEVER** hardcode secrets, API keys, tokens, or passwords in source code.
-* All secrets must be injected via environment variables or a secrets manager at runtime.
-* `.env` files must be listed in `.gitignore` and `.dockerignore`.
-* Use `dotenv` only in development; in production, rely on container-level env injection.
-
-### Dependencies
-
-* Only install packages from the npm public registry with >1,000 weekly downloads unless explicitly approved.
-* Run `npm audit` before every commit. **Zero critical or high vulnerabilities allowed.**
-* Pin all dependency versions exactly in `package.json` (no `^` or `~` prefixes).
-* Regularly update dependencies and review changelogs for security patches.
-* Never use `eval()`, `Function()`, or any dynamic code execution.
-
-### Input Validation & Output Encoding
-
-* Validate and sanitise **all** user input at the boundary (route/controller level).
-* Use a validation library (e.g., `zod`, `joi`, `class-validator`).
-* Parameterise all database queries — **never** concatenate user input into queries.
-* Escape all output rendered in HTML contexts to prevent XSS.
-
-### Authentication & Authorisation
-
-* Use well-established auth libraries (e.g., `passport`, `jsonwebtoken`).
-* Never implement custom cryptography — use `crypto` from Node.js stdlib or `bcrypt`/`argon2`.
-* Enforce least-privilege access on all endpoints.
-* All tokens must have an expiry (`exp` claim for JWTs).
-
-### HTTP & Network Security
-
-* Set security headers using `helmet` middleware.
-* Enable CORS with an explicit allowlist — never use `*` in production.
-* Enforce HTTPS in production; redirect HTTP → HTTPS.
-* Rate-limit all public-facing endpoints.
-* Disable `X-Powered-By` header.
-
-### Logging & Error Handling
-
-* Use a structured logger (e.g., `pino`, `winston`) — never use `console.log` in production code.
-* **Never** log secrets, tokens, passwords, or PII.
-* Return generic error messages to clients; log detailed errors server-side only.
-* Use a global error handler middleware; never leak stack traces to the client.
-
----
-
-## Docker Rules (CRITICAL)
-
-### Dockerfile Requirements
-
-* Use **multi-stage builds** to keep the final image minimal.
-* Base the production stage on `node:<version>-alpine` (LTS only).
-* **Never run the application as root.** Create and use a non-root user:
-  ```dockerfile
-  RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-  USER appuser
-  ```
-* Copy only production artifacts into the final stage (`node_modules`, built code).
-* Use `.dockerignore` to exclude: `.git`, `node_modules`, `.env`, `tests/`, `*.md`, `docker-compose*.yml`.
-* Set `NODE_ENV=production` in the Dockerfile.
-* Use `dumb-init` or `tini` as PID 1 to handle signals properly:
-  ```dockerfile
-  RUN apk add --no-cache tini
-  ENTRYPOINT ["/sbin/tini", "--"]
-  CMD ["node", "src/index.js"]
-  ```
-* Do **not** use `npm start` in production — call `node` directly to avoid unnecessary process wrapping.
-* Set a `HEALTHCHECK` instruction in the Dockerfile.
-* Never use `latest` tag for base images — always pin to a specific version.
-
-### Docker Compose / Runtime
-
-* Do not mount the host filesystem into the container in production.
-* Use read-only filesystem where possible (`read_only: true`).
-* Drop all Linux capabilities and add back only what's needed:
-  ```yaml
-  security_opt:
-    - no-new-privileges:true
-  cap_drop:
-    - ALL
-  ```
-* Set memory and CPU limits on all containers.
-* Use Docker secrets or a vault for sensitive configuration — not environment variables in `docker-compose.yml`.
-
----
-
-## Testing Requirements
-
-* All new code must include unit tests. Minimum **80% code coverage**.
-* Use `jest` or `vitest` as the test runner.
-* Integration tests must run against a Dockerised version of the app.
-* Security-sensitive code (auth, input validation, access control) must have **100% branch coverage**.
-* Run tests in CI before any merge to `main`.
-
-### Running Tests
+## Commands
 
 ```bash
-npm test              # Unit tests
-npm run test:int      # Integration tests
-npm run test:cov      # Coverage report
-npm audit             # Dependency audit
+npm run dev          # Development server with auto-reload (Node watch mode)
+npm start            # Production server
+npm test             # Run tests once (Vitest)
+npm run test:watch   # Vitest in watch mode
+npm run download-geodata  # Download IP2Location LITE .BIN databases (requires IP2LOCATION_TOKEN env var)
 ```
 
----
+Docker:
+```bash
+./docker-build.sh    # Smart build: auto-detects release/dev/dirty, scans with Trivy, tags correctly
+docker compose up -d # Production-like compose (no bind mounts, NODE_ENV=production)
+```
 
-## CI/CD Expectations
+There is no linter configured.
 
-* All PRs must pass: linting, tests, `npm audit`, and Docker build.
-* Container images must be scanned for vulnerabilities (e.g., Trivy, Snyk) before deployment.
-* No direct pushes to `main` — all changes go through pull requests.
-* Signed commits are encouraged.
+## Environment Variables
 
----
+See `.env.example`. Key vars:
+- `PORT` — default 3000
+- `NODE_ENV` — `development` or `production`
+- `IP2LOCATION_TOKEN` — required only for `npm run download-geodata` (free token from lite.ip2location.com)
+- `DEV_IP` — dev-only: simulate a public IP when running locally behind NAT
 
-## Useful Commands
+## Architecture
 
-| Task | Command |
-|:---|:---|
-| Install dependencies | `npm ci` |
-| Run in development | `npm run dev` |
-| Build for production | `npm run build` |
-| Run tests | `npm test` |
-| Lint code | `npm run lint` |
-| Audit dependencies | `npm audit` |
-| Build Docker image | `docker build -t app:latest .` |
-| Run Docker container | `docker compose up` |
+### Request flow
 
----
+`server.js` is the entire backend. It:
+1. Extracts the client IP from proxy headers (`cf-connecting-ip`, `x-forwarded-for`, `x-real-ip`, etc.) and filters out private/loopback ranges
+2. Looks up geolocation in local IP2Location LITE `.BIN` databases
+3. Calls `src/cidrLookup.js` to compute the CIDR prefix for the IP
+4. Returns results via `/` (HTML), `/api/ip` (plain text), `/api/info` (JSON), or `/health`
 
-## Reminders for AI Agents
+### CIDR lookup (`src/cidrLookup.js`)
 
-* When generating code, always follow the security rules above.
-* Prefer well-known, actively maintained libraries over custom implementations.
-* If unsure about a security implication, flag it with a `// SECURITY: review needed` comment.
-* Never generate code that disables TLS verification, ignores certificate errors, or suppresses security warnings.
-* Always consider the principle of least privilege when writing any code that touches the filesystem, network, or OS.
-* When modifying the Dockerfile, re-verify that the non-root user constraint and multi-stage build are preserved.
+Custom BigInt-based CIDR calculator that replaces the ip2location-nodejs implementation, which has a bug for IPv4 addresses ≥ 128.0.0.0. All CIDR logic lives here and is covered by tests.
+
+### Tests (`tests/cidrLookup.test.js`)
+
+Vitest unit tests for CIDR calculation only. Covers IPv4/IPv6 conversion and edge cases including the ≥128.0.0.0 bug fix. Run a single test with:
+```bash
+npx vitest run tests/cidrLookup.test.js -t "test name"
+```
+
+### Frontend (`public/`)
+
+Vanilla JS/CSS, no build step. `app.js` fetches `/api/info` and populates the page. Dark/light mode is supported.
+
+### CI/CD (`.github/workflows/docker-publish.yml`)
+
+Triggers on `v*.*.*` git tags. Builds for linux/amd64 + linux/arm64. Runs Trivy vulnerability scan (blocks on HIGH/CRITICAL) before pushing to the registry.
